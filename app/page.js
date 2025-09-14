@@ -1,21 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react"; // useCallback 추가
 import dynamic from "next/dynamic";
 import ImageUpload from "../components/ImageUpload";
 import Modal from "../components/Modal";
 import LoginModal from "../components/LoginModal";
+import PhotoGallery from "../components/PhotoGallery";
 import { db, storage, auth, provider } from "../lib/firebase/clientApp";
 import { collection, getDocs, addDoc, doc, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { onAuthStateChanged, signInWithPopup } from "firebase/auth";
 import imageCompression from "browser-image-compression";
 import EXIF from "exif-js";
-
+import pageStyles from "./page.module.css";
+import buttonStyles from "../components/controls.module.css";
 
 const Map = dynamic(() => import("../components/Map"), {
   ssr: false,
 });
+
+const formatDate = (date) => {
+  const pad = (num) => num.toString().padStart(2, '0');
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const seconds = pad(date.getSeconds());
+  return `${year}${month}${day}${hours}${minutes}${seconds}`;
+};
 
 export default function Home() {
   const [photos, setPhotos] = useState([]);
@@ -24,12 +37,11 @@ export default function Home() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPhoto, setSelectedPhoto] = useState(null); // imageUrl에서 객체로 변경
-
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [user, setUser] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [visiblePhotos, setVisiblePhotos] = useState([]);
 
-  // 관리자 여부를 확인하는 변수
   const isAdmin = user && user.email === "cutiefunny@gmail.com";
 
   useEffect(() => {
@@ -39,29 +51,29 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    fetchPhotos();
-  }, []);
-
-  const fetchPhotos = async () => {
+  const fetchPhotos = useCallback(async () => {
     const querySnapshot = await getDocs(collection(db, "photos"));
     const photosData = querySnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }));
     setPhotos(photosData);
-  };
+  }, []);
 
-  const handleGoogleLogin = async () => {
+  useEffect(() => {
+    fetchPhotos();
+  }, [fetchPhotos]);
+
+  const handleGoogleLogin = useCallback(async () => {
     try {
       await signInWithPopup(auth, provider);
       setShowLoginModal(false);
     } catch (error) {
       console.error("Login failed:", error);
     }
-  };
+  }, []);
   
-  const handleFileSelect = (imageFile) => {
+  const handleFileSelect = useCallback((imageFile) => {
     if (!user) {
       setShowLoginModal(true);
       return;
@@ -79,7 +91,6 @@ export default function Home() {
           let position;
           const lat = EXIF.getTag(this, "GPSLatitude");
           const lng = EXIF.getTag(this, "GPSLongitude");
-
           if (lat && lng) {
             const latRef = EXIF.getTag(this, "GPSLatitudeRef");
             const lngRef = EXIF.getTag(this, "GPSLongitudeRef");
@@ -106,18 +117,21 @@ export default function Home() {
       }
     };
     processImage(imageFile);
-  };
+  }, [user]);
 
-  const handleTempMarkerChange = (position) => {
+  const handleTempMarkerChange = useCallback((position) => {
     setTempMarker(position);
-  };
+  }, []);
 
-  const handleConfirmUpload = async () => {
+  const handleConfirmUpload = useCallback(async () => {
     if (!selectedImage || !tempMarker || !user) return;
     setIsUploading(true);
-    const storageRef = ref(storage, `images/${Date.now()}_${selectedImage.name}`);
+    const timestamp = formatDate(new Date());
+    const newFileName = `${timestamp}.avif`;
+    const storageRef = ref(storage, `images/${newFileName}`);
     try {
-      const snapshot = await uploadBytes(storageRef, selectedImage);
+      const metadata = { contentType: 'image/avif' };
+      const snapshot = await uploadBytes(storageRef, selectedImage, metadata);
       const url = await getDownloadURL(snapshot.ref);
       await addDoc(collection(db, "photos"), {
         imageUrl: url,
@@ -139,20 +153,23 @@ export default function Home() {
       setTempMarker(null);
       setSelectedImage(null);
     }
-  };
+  }, [selectedImage, tempMarker, user, fetchPhotos]);
 
-  const handleMarkerClick = (photo) => {
+  const handleMarkerClick = useCallback((photo) => {
     setSelectedPhoto(photo);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
     setSelectedPhoto(null);
-  };
+  }, []);
+  
+  const handleBoundsChange = useCallback((newVisiblePhotos) => {
+    setVisiblePhotos(newVisiblePhotos);
+  }, []);
 
-  // 사진 삭제 함수
-  const handleDeletePhoto = async (photoId, imageUrl) => {
+  const handleDeletePhoto = useCallback(async (photoId, imageUrl) => {
     if (!isAdmin) {
       alert("삭제 권한이 없습니다.");
       return;
@@ -170,21 +187,35 @@ export default function Home() {
         alert("삭제에 실패했습니다.");
       }
     }
-  };
+  }, [isAdmin, fetchPhotos, handleCloseModal]);
 
   return (
     <div>
-      <h1>상수동 고양이 지도</h1>
-      <ImageUpload
-        handleFileSelect={handleFileSelect}
-        isConfirming={isConfirming}
-      />
-      {user && <p>{user.displayName}님, 안녕하세요!</p>}
+      <header className={pageStyles.header}>
+        <h1 className={pageStyles.title}>상수동 고양이 지도</h1>
+        <div className={pageStyles.userInfo}>
+          <ImageUpload
+            handleFileSelect={handleFileSelect}
+            isConfirming={isConfirming}
+          />
+          {user && (
+            <img
+              src={user.photoURL}
+              alt="사용자 프로필"
+              className={pageStyles.profileImage}
+            />
+          )}
+        </div>
+      </header>
 
       {isConfirming && (
-        <div>
+        <div className={pageStyles.confirmSection}>
           <p>지도를 움직여 정확한 위치에 핀을 놓아주세요.</p>
-          <button onClick={handleConfirmUpload} disabled={isUploading}>
+          <button
+            className={buttonStyles.button}
+            onClick={handleConfirmUpload}
+            disabled={isUploading}
+          >
             {isUploading ? "업로드 중..." : "이 위치에 사진 추가하기"}
           </button>
         </div>
@@ -196,7 +227,10 @@ export default function Home() {
         onTempMarkerChange={handleTempMarkerChange}
         isConfirming={isConfirming}
         onMarkerClick={handleMarkerClick}
+        onBoundsChange={handleBoundsChange}
       />
+      
+      <PhotoGallery photos={visiblePhotos} onPhotoClick={handleMarkerClick} />
       
       {isModalOpen && (
         <Modal

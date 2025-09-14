@@ -1,0 +1,29 @@
+.container {
+  padding: 10px;
+  background-color: #f1f1f1;
+  overflow-x: auto;
+  white-space: nowrap;
+  border-top: 1px solid #ddd;
+}
+
+.photoWrapper {
+  display: inline-block;
+  margin: 0 5px;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.photo {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  display: block;
+}
+
+.placeholder {
+  color: #888;
+  padding: 30px;
+  text-align: center;
+}
