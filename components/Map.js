@@ -11,16 +11,6 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
   const existingMarkersRef = useRef([]);
   const [currentZoom, setCurrentZoom] = useState(15);
 
-  const updateVisiblePhotos = () => {
-    if (!mapInstance.current || !photos) return;
-    const { naver } = window;
-    const bounds = mapInstance.current.getBounds();
-    const visible = photos.filter(photo =>
-      bounds.hasLatLng(new naver.maps.LatLng(photo.lat, photo.lng))
-    );
-    onBoundsChange(visible);
-  };
-
   useEffect(() => {
     const { naver } = window;
     if (!mapElement.current || !naver) return;
@@ -32,14 +22,34 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
     const map = new naver.maps.Map(mapElement.current, mapOptions);
     mapInstance.current = map;
     setCurrentZoom(map.getZoom());
-
     naver.maps.Event.addListener(map, 'zoom_changed', () => setCurrentZoom(map.getZoom()));
-    
-    // 지도 드래그와 줌이 끝났을 때 이벤트 리스너 추가
-    naver.maps.Event.addListener(map, 'dragend', updateVisiblePhotos);
-    naver.maps.Event.addListener(map, 'zoom_changed', updateVisiblePhotos);
-
   }, []);
+
+  // 지도 경계가 변경될 때 보이는 사진을 업데이트하는 로직을 별도의 useEffect로 분리
+  useEffect(() => {
+    if (!mapInstance.current) return;
+    const { naver } = window;
+    
+    const updateVisiblePhotos = () => {
+      const bounds = mapInstance.current.getBounds();
+      const visible = photos.filter(photo =>
+        bounds.hasLatLng(new naver.maps.LatLng(photo.lat, photo.lng))
+      );
+      onBoundsChange(visible);
+    };
+
+    // 'idle' 이벤트 리스너 등록
+    const listener = naver.maps.Event.addListener(mapInstance.current, 'idle', updateVisiblePhotos);
+    
+    // 초기 로드 시에도 한 번 실행
+    updateVisiblePhotos();
+
+    // useEffect cleanup 함수: 컴포넌트가 리렌더링되기 전에 리스너를 제거
+    return () => {
+      naver.maps.Event.removeListener(listener);
+    };
+  }, [photos, onBoundsChange]); // photos가 바뀔 때마다 리스너를 새로 등록
+
 
   useEffect(() => {
     if (!mapInstance.current) return;
@@ -63,8 +73,6 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
         existingMarkersRef.current.push({ id: photo.id, photo: photo, marker: marker });
       }
     });
-    // 마커가 처음 로드되거나 변경될 때 갤러리 업데이트
-    updateVisiblePhotos();
   }, [photos, onMarkerClick]);
 
   useEffect(() => {
