@@ -1,7 +1,7 @@
 {
-    "name": "app-base",
-    "short_name": "app-base",
-    "description": "base for all apps",
+    "name": "상수동 길냥이 도감",
+    "short_name": "상수동 길냥이 도감",
+    "description": "상수동 길냥이 도감",
     "orientation": "portrait",
     "start_url": "/",
     "display": "standalone",

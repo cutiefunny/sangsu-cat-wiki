@@ -7,7 +7,7 @@ export const metadata = {
     default: "상수동 길냥이 도감",
     template: "상수동 길냥이 도감",
   },
-  description: "base for all apps",
+  description: "상수동 길냥이 도감",
   keywords: ["상수동 길냥이 도감"],
   manifest: "/manifest.json",
   appleWebApp: {
@@ -26,7 +26,7 @@ export const metadata = {
       default: "상수동 길냥이 도감",
       template: "상수동 길냥이 도감",
     },
-    description: "base for all apps",
+    description: "상수동 길냥이 도감",
   },
 };
 
