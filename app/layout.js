@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import NaverMapProvider from "../components/NaverMapProvider";
 import "./globals.css";
 
 export const metadata = {
@@ -27,7 +27,7 @@ export const metadata = {
       template: "app-base",
     },
     description: "base for all apps",
-  }
+  },
 };
 
 export const viewport = {
@@ -41,7 +41,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        {children}
+        <NaverMapProvider>{children}</NaverMapProvider>
       </body>
     </html>
   );

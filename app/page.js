@@ -1,10 +1,32 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+
+import { useState, useEffect } from "react";
+import Map from "../components/Map";
+import ImageUpload from "../components/ImageUpload";
+import { db } from "../lib/firebase/clientApp";
+import { collection, getDocs } from "firebase/firestore";
 
 export default function Home() {
+  const [photos, setPhotos] = useState([]);
+
+  useEffect(() => {
+    const fetchPhotos = async () => {
+      const querySnapshot = await getDocs(collection(db, "photos"));
+      const photosData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setPhotos(photosData);
+    };
+
+    fetchPhotos();
+  }, []);
+
   return (
-    <div className={styles.page}>
-      <h1>상수동 고양이 도감</h1>
+    <div>
+      <h1>상수동 고양이 지도</h1>
+      <ImageUpload />
+      <Map photos={photos} />
     </div>
   );
 }
