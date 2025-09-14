@@ -1,19 +1,19 @@
-import NaverMapProvider from "../components/NaverMapProvider";
+import Script from "next/script";
 import "./globals.css";
 
 export const metadata = {
-  applicationName: "app-base",
+  applicationName: "상수동 길냥이 도감",
   title: {
-    default: "app-base",
-    template: "app-base",
+    default: "상수동 길냥이 도감",
+    template: "상수동 길냥이 도감",
   },
   description: "base for all apps",
-  keywords: ["app-base"],
+  keywords: ["상수동 길냥이 도감"],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "app-base",
+    title: "상수동 길냥이 도감",
     // startUpImage: [],
   },
   formatDetection: {
@@ -21,10 +21,10 @@ export const metadata = {
   },
   openGraph: {
     type: "website",
-    siteName: "app-base",
+    siteName: "상수동 길냥이 도감",
     title: {
-      default: "app-base",
-      template: "app-base",
+      default: "상수동 길냥이 도감",
+      template: "상수동 길냥이 도감",
     },
     description: "base for all apps",
   },
@@ -41,7 +41,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <NaverMapProvider>{children}</NaverMapProvider>
+        <Script
+          strategy="beforeInteractive"
+          src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID}`}
+        />
+        {children}
       </body>
     </html>
   );

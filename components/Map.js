@@ -1,31 +1,42 @@
 "use client";
 
-import { Container as MapDiv, NaverMap, Marker, useNavermaps } from "react-naver-maps";
+import { useEffect, useRef } from "react";
 
 function Map({ photos }) {
-  const navermaps = useNavermaps();
+  const mapElement = useRef(null);
 
-  return (
-    <MapDiv
-        style={{
-            width: '100%',
-            height: '600px',
-        }}
-    >
-        <NaverMap
-            defaultCenter={new navermaps.LatLng(37.548, 126.923)}
-            defaultZoom={15}
-        >
-            {photos.map((photo) => (
-                <Marker
-                    key={photo.id}
-                    position={new navermaps.LatLng(photo.lat, photo.lng)}
-                    onClick={() => alert(photo.imageUrl)}
-                />
-            ))}
-        </NaverMap>
-    </MapDiv>
-  );
+  useEffect(() => {
+    const { naver } = window;
+    if (!mapElement.current || !naver) return;
+
+    // 지도에 표시할 위치를 지정합니다.
+    const location = new naver.maps.LatLng(37.548, 126.923);
+
+    // 지도 옵션을 설정합니다.
+    const mapOptions = {
+      center: location,
+      zoom: 15,
+      zoomControl: true,
+    };
+
+    // 지도를 생성합니다.
+    const map = new naver.maps.Map(mapElement.current, mapOptions);
+
+    // 사진 데이터를 기반으로 마커를 생성합니다.
+    photos.forEach((photo) => {
+      const marker = new naver.maps.Marker({
+        position: new naver.maps.LatLng(photo.lat, photo.lng),
+        map: map,
+      });
+
+      // 마커 클릭 시 이미지 URL을 alert로 표시합니다. (추후 인포윈도우 등으로 개선 가능)
+      naver.maps.Event.addListener(marker, "click", () => {
+        alert(photo.imageUrl);
+      });
+    });
+  }, [photos]);
+
+  return <div ref={mapElement} style={{ width: "100%", height: "600px" }} />;
 }
 
 export default Map;
