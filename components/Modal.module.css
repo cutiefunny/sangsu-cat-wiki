@@ -22,7 +22,14 @@
   flex-direction: column;
 }
 
-.modal img {
+.imageContainer {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modalImage {
   max-width: 100%;
   max-height: 80vh;
   object-fit: contain;
@@ -37,18 +44,21 @@
   font-size: 24px;
   cursor: pointer;
   color: black;
+  z-index: 1010;
 }
 
-/* 삭제 버튼 스타일 추가 */
+/* 삭제 버튼 스타일 수정 */
 .deleteButton {
-  margin-top: 10px;
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
   padding: 8px 12px;
-  background-color: #ff4d4d;
+  background-color: rgba(255, 77, 77, 0.85);
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  align-self: flex-end; /* 버튼을 오른쪽으로 정렬 */
+  z-index: 10;
 }
 
 .deleteButton:hover {

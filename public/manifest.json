@@ -1,7 +1,7 @@
 {
-    "name": "상수동 길냥이 도감",
-    "short_name": "상수동 길냥이 도감",
-    "description": "상수동 길냥이 도감",
+    "name": "우리 동네 길냥이 도감",
+    "short_name": "우리 동네 길냥이 도감",
+    "description": "우리 동네 길냥이 도감",
     "orientation": "portrait",
     "start_url": "/",
     "display": "standalone",

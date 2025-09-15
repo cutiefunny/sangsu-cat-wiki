@@ -2,18 +2,18 @@ import Script from "next/script";
 import "./globals.css";
 
 export const metadata = {
-  applicationName: "상수동 길냥이 도감",
+  applicationName: "우리 동네 길냥이 도감",
   title: {
-    default: "상수동 길냥이 도감",
-    template: "상수동 길냥이 도감",
+    default: "우리 동네 길냥이 도감",
+    template: "우리 동네 길냥이 도감",
   },
-  description: "상수동 길냥이 도감",
-  keywords: ["상수동 길냥이 도감"],
+  description: "우리 동네 길냥이 도감",
+  keywords: ["우리 동네 길냥이 도감"],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "상수동 길냥이 도감",
+    title: "우리 동네 길냥이 도감",
     // startUpImage: [],
   },
   formatDetection: {
@@ -21,12 +21,12 @@ export const metadata = {
   },
   openGraph: {
     type: "website",
-    siteName: "상수동 길냥이 도감",
+    siteName: "우리 동네 길냥이 도감",
     title: {
-      default: "상수동 길냥이 도감",
-      template: "상수동 길냥이 도감",
+      default: "우리 동네 길냥이 도감",
+      template: "우리 동네 길냥이 도감",
     },
-    description: "상수동 길냥이 도감",
+    description: "우리 동네 길냥이 도감",
   },
 };
 

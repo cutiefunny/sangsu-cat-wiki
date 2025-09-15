@@ -9,8 +9,7 @@ function LoginModal({ onLogin, onClose }) {
         <button className={modalStyles.closeButton} onClick={onClose}>
           &times;
         </button>
-        <h2>로그인 필요</h2>
-        <p>사진을 업로드하려면 로그인이 필요합니다.</p>
+        <p>해당 기능은 로그인이 필요합니다.</p>
         <button className={buttonStyles.button} onClick={onLogin}>
           Google로 로그인
         </button>

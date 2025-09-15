@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react"; // useCallback 추가
+import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import ImageUpload from "../components/ImageUpload";
 import Modal from "../components/Modal";
 import LoginModal from "../components/LoginModal";
+import ProfileModal from "../components/ProfileModal";
 import PhotoGallery from "../components/PhotoGallery";
 import { db, storage, auth, provider } from "../lib/firebase/clientApp";
 import { collection, getDocs, addDoc, doc, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { onAuthStateChanged, signInWithPopup } from "firebase/auth";
+import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import imageCompression from "browser-image-compression";
 import EXIF from "exif-js";
 import pageStyles from "./page.module.css";
@@ -40,6 +41,7 @@ export default function Home() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [user, setUser] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [visiblePhotos, setVisiblePhotos] = useState([]);
 
   const isAdmin = user && user.email === "cutiefunny@gmail.com";
@@ -72,12 +74,17 @@ export default function Home() {
       console.error("Login failed:", error);
     }
   }, []);
-  
-  const handleFileSelect = useCallback((imageFile) => {
-    if (!user) {
-      setShowLoginModal(true);
-      return;
+
+  const handleSignOut = useCallback(async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Sign out failed:", error);
     }
+  }, []);
+
+  const handleFileSelect = useCallback((imageFile) => {
+    // 로그인 확인 로직을 ImageUpload 컴포넌트로 옮겼으므로 여기서는 제거합니다.
     const processImage = async (file) => {
       const options = {
         maxSizeMB: 0.1,
@@ -117,7 +124,7 @@ export default function Home() {
       }
     };
     processImage(imageFile);
-  }, [user]);
+  }, []);
 
   const handleTempMarkerChange = useCallback((position) => {
     setTempMarker(position);
@@ -188,6 +195,10 @@ export default function Home() {
       }
     }
   }, [isAdmin, fetchPhotos, handleCloseModal]);
+  
+  const handleLoginRequest = () => {
+    setShowLoginModal(true);
+  };
 
   return (
     <div>
@@ -197,12 +208,22 @@ export default function Home() {
           <ImageUpload
             handleFileSelect={handleFileSelect}
             isConfirming={isConfirming}
+            user={user}
+            onLoginRequest={handleLoginRequest}
           />
-          {user && (
+          {user ? (
             <img
               src={user.photoURL}
               alt="사용자 프로필"
               className={pageStyles.profileImage}
+              onClick={() => setShowProfileModal(true)}
+              style={{ cursor: 'pointer' }}
+            />
+          ) : (
+            <div
+              className={pageStyles.anonymousAvatar}
+              onClick={() => setShowLoginModal(true)}
+              title="로그인"
             />
           )}
         </div>
@@ -238,6 +259,7 @@ export default function Home() {
           onClose={handleCloseModal}
           isAdmin={isAdmin}
           onDelete={handleDeletePhoto}
+          onLoginRequest={handleLoginRequest}
         />
       )}
 
@@ -245,6 +267,13 @@ export default function Home() {
         <LoginModal
           onLogin={handleGoogleLogin}
           onClose={() => setShowLoginModal(false)}
+        />
+      )}
+
+      {showProfileModal && (
+        <ProfileModal
+          user={user}
+          onClose={() => setShowProfileModal(false)}
         />
       )}
     </div>
