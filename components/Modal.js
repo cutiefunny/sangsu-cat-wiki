@@ -43,14 +43,6 @@ function Modal({ photo, onClose, isAdmin, onDelete, onLoginRequest, onCreateCatP
             </button>
           )}
         </div>
-        
-        {photo.catId && photo.catName && (
-          <div className={styles.catInfo}>
-            <Link href={`/${photo.catId}`}>
-              <span className={styles.catName}>{photo.catName}</span>
-            </Link>
-          </div>
-        )}
 
         <Comments photo={photo} isAdmin={isAdmin} onLoginRequest={onLoginRequest} />
       </div>
