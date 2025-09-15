@@ -1,9 +1,11 @@
+// components/Modal.js
+
 import React from "react";
+import Link from 'next/link';
 import styles from "./Modal.module.css";
 import Comments from "./Comments";
 
-// photo 객체를 Comments 컴포넌트에 전달하도록 수정합니다.
-function Modal({ photo, onClose, isAdmin, onDelete, onLoginRequest }) {
+function Modal({ photo, onClose, isAdmin, onDelete, onLoginRequest, onCreateCatProfile }) {
   if (!photo) return null;
 
   return (
@@ -14,6 +16,24 @@ function Modal({ photo, onClose, isAdmin, onDelete, onLoginRequest }) {
         </button>
         <div className={styles.imageContainer}>
           <img src={photo.imageUrl} alt="상세 이미지" className={styles.modalImage} />
+
+          {/* '도감 만들기' 또는 '도감 보기' 버튼 (legacyBehavior 수정) */}
+          {photo.catId ? (
+            <Link 
+              href={`/${photo.catId}`} 
+              className={`${styles.actionButton} ${styles.viewAlbumButton}`}
+            >
+              도감 보기
+            </Link>
+          ) : (
+            <button
+              className={`${styles.actionButton} ${styles.createAlbumButton}`}
+              onClick={() => onCreateCatProfile(photo)}
+            >
+              도감 만들기
+            </button>
+          )}
+
           {isAdmin && (
             <button
               className={styles.deleteButton}
@@ -23,7 +43,15 @@ function Modal({ photo, onClose, isAdmin, onDelete, onLoginRequest }) {
             </button>
           )}
         </div>
-        {/* photoId 대신 photo 객체 전체를 전달합니다. */}
+        
+        {photo.catId && photo.catName && (
+          <div className={styles.catInfo}>
+            <Link href={`/${photo.catId}`}>
+              <span className={styles.catName}>{photo.catName}</span>
+            </Link>
+          </div>
+        )}
+
         <Comments photo={photo} isAdmin={isAdmin} onLoginRequest={onLoginRequest} />
       </div>
     </div>

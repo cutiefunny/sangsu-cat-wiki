@@ -47,7 +47,6 @@
   z-index: 1010;
 }
 
-/* 삭제 버튼 스타일 수정 */
 .deleteButton {
   position: absolute;
   bottom: 10px;
@@ -63,4 +62,55 @@
 
 .deleteButton:hover {
   background-color: #cc0000;
+}
+
+.catInfo {
+  padding: 10px 0;
+  text-align: center;
+  border-bottom: 1px solid #eee;
+}
+
+.catName {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #007bff;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.catName:hover {
+  text-decoration: underline;
+}
+
+/* 도감 버튼 관련 스타일 추가 */
+.actionButton {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 10;
+  color: white;
+  font-size: 14px;
+  text-decoration: none; /* Link 태그의 기본 밑줄 제거 */
+  display: inline-block;
+  text-align: center;
+}
+
+.createAlbumButton {
+  background-color: #28a745; /* Green */
+}
+
+.createAlbumButton:hover {
+  background-color: #218838;
+}
+
+.viewAlbumButton {
+  background-color: #007bff; /* Blue */
+}
+
+.viewAlbumButton:hover {
+  background-color: #0056b3;
 }

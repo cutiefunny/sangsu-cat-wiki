@@ -7,9 +7,11 @@ import Modal from "../components/Modal";
 import LoginModal from "../components/LoginModal";
 import ProfileModal from "../components/ProfileModal";
 import PhotoGallery from "../components/PhotoGallery";
+// CreateCatProfileModal을 import 합니다.
+import CreateCatProfileModal from "../components/CreateCatProfileModal";
 import { db, storage, auth, provider } from "../lib/firebase/clientApp";
 import {
-  collection, getDocs, addDoc, doc, deleteDoc, query, where, writeBatch, getDoc, setDoc
+  collection, getDocs, addDoc, doc, deleteDoc, query, where, writeBatch, getDoc, setDoc, updateDoc
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { onAuthStateChanged, signInWithPopup, signOut, updateProfile } from "firebase/auth";
@@ -45,6 +47,10 @@ export default function Home() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [visiblePhotos, setVisiblePhotos] = useState([]);
+  
+  // 새로운 상태 변수 추가
+  const [showCreateCatProfileModal, setShowCreateCatProfileModal] = useState(false);
+  const [photoToCreateProfileFor, setPhotoToCreateProfileFor] = useState(null);
 
   const isAdmin = user && user.email === "cutiefunny@gmail.com";
 
@@ -104,8 +110,6 @@ export default function Home() {
       await updateProfile(auth.currentUser, { photoURL: newPhotoURL });
       await updateUserRecords(user.uid, { userPhotoURL: newPhotoURL });
       
-      // ✨ 여기가 수정된 부분입니다.
-      // updateDoc 대신 setDoc과 { merge: true } 옵션을 사용합니다.
       const userDocRef = doc(db, "users", user.uid);
       await setDoc(userDocRef, { photoURL: newPhotoURL }, { merge: true });
       
@@ -223,6 +227,50 @@ export default function Home() {
   }, [isAdmin, fetchPhotos, handleCloseModal]);
   const handleLoginRequest = () => { setShowLoginModal(true); };
 
+  // '도감 만들기' 모달을 여는 함수
+  const handleOpenCreateCatProfileModal = useCallback((photo) => {
+    setPhotoToCreateProfileFor(photo);
+    setShowCreateCatProfileModal(true);
+    setIsModalOpen(false); // 기존 사진 상세 모달은 닫기
+  }, []);
+
+  // 새로운 고양이 프로필을 저장하는 함수
+  const handleSaveCatProfile = useCallback(async (catData) => {
+    if (!user) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+    if (!photoToCreateProfileFor) {
+      alert("오류: 대상 사진 정보가 없습니다.");
+      return;
+    }
+
+    try {
+      // 1. 'cats' 컬렉션에 새로운 고양이 정보 추가
+      const newCatRef = await addDoc(collection(db, 'cats'), {
+        ...catData,
+        createdAt: new Date(),
+        createdBy: user.uid,
+      });
+
+      // 2. 'photos' 컬렉션의 해당 사진 문서에 catId와 catName 업데이트
+      const photoDocRef = doc(db, 'photos', photoToCreateProfileFor.id);
+      await updateDoc(photoDocRef, {
+        catId: newCatRef.id,
+        catName: catData.name,
+      });
+
+      alert(`'${catData.name}' 도감이 생성되었습니다.`);
+      setShowCreateCatProfileModal(false);
+      setPhotoToCreateProfileFor(null);
+      await fetchPhotos(); // 전체 사진 목록 새로고침
+
+    } catch (error) {
+      console.error("Error saving cat profile: ", error);
+      alert("도감 생성에 실패했습니다.");
+    }
+  }, [user, photoToCreateProfileFor, fetchPhotos]);
+
   return (
     <div>
       <header className={pageStyles.header}>
@@ -246,7 +294,25 @@ export default function Home() {
       )}
       <Map photos={photos} tempMarker={tempMarker} onTempMarkerChange={handleTempMarkerChange} isConfirming={isConfirming} onMarkerClick={handleMarkerClick} onBoundsChange={handleBoundsChange} />
       <PhotoGallery photos={visiblePhotos} onPhotoClick={handleMarkerClick} />
-      {isModalOpen && ( <Modal photo={selectedPhoto} onClose={handleCloseModal} isAdmin={isAdmin} onDelete={handleDeletePhoto} onLoginRequest={handleLoginRequest} /> )}
+      
+      {isModalOpen && (
+        <Modal
+          photo={selectedPhoto}
+          onClose={handleCloseModal}
+          isAdmin={isAdmin}
+          onDelete={handleDeletePhoto}
+          onLoginRequest={handleLoginRequest}
+          onCreateCatProfile={handleOpenCreateCatProfileModal} // prop 전달
+        />
+      )}
+
+      {showCreateCatProfileModal && (
+        <CreateCatProfileModal
+          onClose={() => setShowCreateCatProfileModal(false)}
+          onSave={handleSaveCatProfile}
+        />
+      )}
+
       {showLoginModal && ( <LoginModal onLogin={handleGoogleLogin} onClose={() => setShowLoginModal(false)} /> )}
       {showProfileModal && ( <ProfileModal user={user} onClose={() => setShowProfileModal(false)} onUpdateAvatar={handleUpdateAvatar} onUpdateNickname={handleUpdateNickname} /> )}
     </div>
