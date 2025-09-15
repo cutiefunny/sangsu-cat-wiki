@@ -15,7 +15,7 @@
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  width: 200px;
+  width: 220px;
   height: fit-content;
   margin-right: 20px;
   display: flex;
@@ -38,6 +38,9 @@
 
 .displayName {
   font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .menuList {
@@ -54,4 +57,41 @@
 
 .menuItem:hover {
   background-color: #f5f5f5;
+}
+
+/* 닉네임 수정 관련 스타일 추가 */
+.nicknameInput {
+  font-size: 16px;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100%;
+}
+
+.editControls {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 15px;
+  gap: 10px;
+  background-color: #f9f9f9;
+  border-top: 1px solid #eee;
+}
+
+.editControls button {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  background-color: white;
+}
+
+.editControls button:last-child {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.editControls button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

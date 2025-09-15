@@ -3,8 +3,8 @@ import { collection, addDoc, query, where, getDocs, serverTimestamp, doc, delete
 import { db, auth } from '../lib/firebase/clientApp';
 import styles from './Comments.module.css';
 
-// onLoginRequest prop 추가
-function Comments({ photoId, isAdmin, onLoginRequest }) {
+// photoId 대신 photo 객체를 prop으로 받도록 수정합니다.
+function Comments({ photo, isAdmin, onLoginRequest }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [user, setUser] = useState(null);
@@ -17,32 +17,32 @@ function Comments({ photoId, isAdmin, onLoginRequest }) {
   }, []);
 
   const fetchComments = async () => {
-    if (!photoId) return;
-    const q = query(collection(db, 'comments'), where('photoId', '==', photoId));
+    if (!photo?.id) return;
+    const q = query(collection(db, 'comments'), where('photoId', '==', photo.id));
     const querySnapshot = await getDocs(q);
     const commentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     commentsData.sort((a, b) => a.createdAt?.toMillis() - b.createdAt?.toMillis());
     setComments(commentsData);
   };
 
+  // photo.id가 변경될 때마다 댓글을 다시 불러옵니다.
   useEffect(() => {
     fetchComments();
-  }, [photoId]);
+  }, [photo.id]);
 
   const handleAddComment = async (e) => {
     e.preventDefault();
-    // 사용자가 없으면 로그인 요청 함수를 호출
     if (!user) {
       onLoginRequest();
       return;
     }
     if (!newComment.trim()) {
-      return; // 댓글 내용이 없으면 아무것도 안 함
+      return;
     }
 
     try {
       await addDoc(collection(db, 'comments'), {
-        photoId,
+        photoId: photo.id,
         userId: user.uid,
         userName: user.displayName,
         userPhotoURL: user.photoURL,
@@ -71,13 +71,16 @@ function Comments({ photoId, isAdmin, onLoginRequest }) {
 
   return (
     <div className={styles.commentsSection}>
-      {/* h3 제목 태그 제거 */}
       <div className={styles.commentsList}>
         {comments.map(comment => (
           <div key={comment.id} className={styles.comment}>
             <img src={comment.userPhotoURL} alt={comment.userName} className={styles.commentUserPhoto} />
             <div className={styles.commentBody}>
-              <strong>{comment.userName}</strong>
+              <strong>
+                {comment.userName}
+                {/* 댓글 작성자와 사진 게시자가 동일한지 확인합니다. */}
+                {photo.userId === comment.userId && <span className={styles.authorTag}> (작성자)</span>}
+              </strong>
               <p>{comment.text}</p>
             </div>
             {(isAdmin || (user && user.uid === comment.userId)) && (
@@ -92,7 +95,6 @@ function Comments({ photoId, isAdmin, onLoginRequest }) {
           </div>
         ))}
       </div>
-      {/* 로그인 여부와 관계없이 항상 form을 표시 */}
       <form onSubmit={handleAddComment} className={styles.commentForm}>
         <input
           type="text"

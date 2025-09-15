@@ -2,7 +2,7 @@ import React from "react";
 import styles from "./Modal.module.css";
 import Comments from "./Comments";
 
-// onLoginRequest prop을 받도록 수정
+// photo 객체를 Comments 컴포넌트에 전달하도록 수정합니다.
 function Modal({ photo, onClose, isAdmin, onDelete, onLoginRequest }) {
   if (!photo) return null;
 
@@ -23,8 +23,8 @@ function Modal({ photo, onClose, isAdmin, onDelete, onLoginRequest }) {
             </button>
           )}
         </div>
-        {/* Comments 컴포넌트로 onLoginRequest prop 전달 */}
-        <Comments photoId={photo.id} isAdmin={isAdmin} onLoginRequest={onLoginRequest} />
+        {/* photoId 대신 photo 객체 전체를 전달합니다. */}
+        <Comments photo={photo} isAdmin={isAdmin} onLoginRequest={onLoginRequest} />
       </div>
     </div>
   );

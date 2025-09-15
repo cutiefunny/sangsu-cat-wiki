@@ -37,6 +37,8 @@
 .commentBody strong {
   font-weight: bold;
   margin-bottom: 3px;
+  display: flex;
+  align-items: center;
 }
 
 .commentBody p {
@@ -83,4 +85,11 @@
 
 .deleteCommentBtn:hover {
   color: #333;
+}
+
+.authorTag {
+  color: #888;
+  font-weight: normal;
+  font-size: 0.85em;
+  margin-left: 6px;
 }
