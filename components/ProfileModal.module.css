@@ -55,6 +55,16 @@
   font-size: 16px;
 }
 
+/* Link 컴포넌트 내부의 a 태그 스타일을 직접 지정합니다. */
+.menuItem a {
+  text-decoration: none !important; /* 밑줄을 확실히 제거합니다. */
+  color: inherit; /* 부모 요소의 색상을 상속받습니다. */
+  display: block; /* 링크 영역을 li 전체로 확장합니다. */
+  margin: -12px -15px; /* 부모 li의 padding을 채웁니다. */
+  padding: 12px 15px;
+}
+
+
 .menuItem:hover {
   background-color: #f5f5f5;
 }

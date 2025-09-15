@@ -274,7 +274,7 @@ export default function Home() {
   return (
     <div>
       <header className={pageStyles.header}>
-        <h1 className={pageStyles.title}>상수동 고양이 지도</h1>
+        <img src="/images/icon.png" alt="로고" height={40} />
         <div className={pageStyles.userInfo}>
           <ImageUpload handleFileSelect={handleFileSelect} isConfirming={isConfirming} user={user} onLoginRequest={handleLoginRequest} />
           {user ? (

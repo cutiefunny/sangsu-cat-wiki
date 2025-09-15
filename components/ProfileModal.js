@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import styles from './ProfileModal.module.css';
 import { auth } from '../lib/firebase/clientApp';
 import { signOut } from 'firebase/auth';
+import Link from 'next/link';
 
 function ProfileModal({ user, onClose, onUpdateAvatar, onUpdateNickname }) {
   const [isEditingNickname, setIsEditingNickname] = useState(false);
@@ -72,7 +73,11 @@ function ProfileModal({ user, onClose, onUpdateAvatar, onUpdateNickname }) {
           <ul className={styles.menuList}>
             <li className={styles.menuItem} onClick={handleAvatarChangeClick}>아바타 변경</li>
             <li className={styles.menuItem} onClick={handleNicknameChangeClick}>닉네임 변경</li>
-            <li className={styles.menuItem}>내 활동 내역</li>
+            <li className={styles.menuItem}>
+              <Link href="/activity" onClick={onClose}>
+                내 활동 내역
+              </Link>
+            </li>
             <li className={styles.menuItem} onClick={handleLogout}>로그아웃</li>
           </ul>
         ) : (
