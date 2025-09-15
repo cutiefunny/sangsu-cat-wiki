@@ -26,6 +26,40 @@
   color: #666;
 }
 
+/* 갤러리 헤더 스타일 추가 */
+.galleryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.galleryHeader h3 {
+  font-size: 1.5em;
+  margin: 0;
+}
+
+.addPhotoButton {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  background-color: #007bff;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.addPhotoButton:hover {
+  background-color: #0056b3;
+}
+
+.addPhotoButton:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+
 .gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
