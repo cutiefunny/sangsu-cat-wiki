@@ -120,7 +120,7 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
     }
   }, [isConfirming, tempMarker, onTempMarkerChange]);
 
-  return <div ref={mapElement} style={{ width: "100%", height: "600px" }} />;
+  return <div ref={mapElement} style={{ width: "100%", height: "400px" }} />;
 }
 
 export default Map;
