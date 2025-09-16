@@ -26,7 +26,6 @@
   color: #666;
 }
 
-/* 갤러리 헤더 스타일 추가 */
 .galleryHeader {
   display: flex;
   justify-content: space-between;
@@ -39,49 +38,61 @@
   margin: 0;
 }
 
-.addPhotoButton {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 5px;
-  background-color: #007bff;
-  color: white;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.addPhotoButton:hover {
-  background-color: #0056b3;
-}
-
-.addPhotoButton:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-
-.gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 15px;
-}
-
-.photoContainer {
+.sliderContainer {
   width: 100%;
-  padding-top: 100%; /* 1:1 Aspect Ratio */
-  position: relative;
+  max-width: 800px;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  margin: 0 auto;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  background-color: #f0f0f0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  position: relative; 
 }
 
-.photo {
-  position: absolute;
-  top: 0;
-  left: 0;
+.sliderContainer img {
+  display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+}
+
+/* --- 여기부터 화살표 커스텀 스타일 --- */
+.sliderContainer :global(.swiper-button-prev),
+.sliderContainer :global(.swiper-button-next) {
+  /* 화살표의 색상을 흰색으로 변경 */
+  color: white; 
+  /* 배경을 약간 어둡게 하여 흰색 화살표가 잘 보이도록 함 */
+  /* background-color: rgba(0, 0, 0, 0.2);  */
+  /* 동그랗게 만들기 */
+  border-radius: 50%; 
+  /* 크기 줄이기 */
+  width: 30px; 
+  height: 30px;
+  /* 화살표 아이콘 크기 줄이기 */
+  transform: scale(0.6); 
+  /* 그림자 효과로 입체감 주기 */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* 화살표 아이콘의 기본 스타일 오버라이드 */
+.sliderContainer :global(.swiper-button-prev)::after,
+.sliderContainer :global(.swiper-button-next)::after {
+  font-size: 20px !important;
+  font-weight: bold;
+}
+
+/* 화살표 위치를 하단으로 조정 (기본값은 중앙) */
+.sliderContainer :global(.swiper-button-prev) {
+  left: 15px;
+}
+
+.sliderContainer :global(.swiper-button-next) {
+  right: 15px;
 }
 
 .message {
@@ -91,7 +102,6 @@
   padding: 40px;
 }
 
-/* 수정/삭제 버튼 및 폼 스타일 추가 */
 .buttonGroup {
   position: absolute;
   top: 10px;
@@ -127,14 +137,12 @@
 }
 
 .saveButton {
-  background-color: #007bff;
-  color: white;
+  color: #007bff;
   border-color: #007bff;
 }
 
 .cancelButton {
-  background-color: #6c757d;
-  color: white;
+  color: #6c757d;
   border-color: #6c757d;
 }
 

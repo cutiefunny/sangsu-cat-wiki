@@ -1,8 +1,8 @@
 // components/Thread.js
 import { useState, useEffect, useRef } from 'react';
-import { collection, addDoc, query, where, getDocs, serverTimestamp, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, serverTimestamp, orderBy, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { db, auth, storage } from '../lib/firebase/clientApp';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import imageCompression from "browser-image-compression";
 import styles from './Thread.module.css';
 
@@ -137,21 +137,52 @@ function Thread({ cat, isAdmin, onPostCreated }) {
     }
   };
 
-  const handleDeletePost = async (postId) => {
+  const handleDeletePost = async (post) => {
     if (confirm("정말로 이 글을 삭제하시겠습니까?")) {
         try {
-          await deleteDoc(doc(db, "threads", postId));
-          fetchThreads();
+            // 이미지가 있는 게시물인 경우, Storage와 'photos' 컬렉션에서도 삭제
+            if (post.imageUrl) {
+                const batch = writeBatch(db);
+
+                // 1. 'photos' 컬렉션에서 해당 이미지 URL을 가진 문서 찾아 삭제 목록에 추가
+                const photosQuery = query(collection(db, 'photos'), where('imageUrl', '==', post.imageUrl));
+                const photosSnapshot = await getDocs(photosQuery);
+                if (!photosSnapshot.empty) {
+                    photosSnapshot.forEach(photoDoc => {
+                        batch.delete(photoDoc.ref);
+                    });
+                }
+
+                // 2. 'threads' 문서 삭제 목록에 추가
+                batch.delete(doc(db, "threads", post.id));
+
+                // 3. Firestore 일괄 작업 실행
+                await batch.commit();
+
+                // 4. Storage에서 이미지 파일 삭제
+                const imageRef = ref(storage, post.imageUrl);
+                await deleteObject(imageRef);
+
+            } else {
+                // 이미지가 없는 경우, 'threads' 문서만 삭제
+                await deleteDoc(doc(db, "threads", post.id));
+            }
+
+            // 목록 새로고침
+            fetchThreads();
+            if (onPostCreated) { // 부모 컴포넌트(도감 페이지)의 데이터 갱신
+              onPostCreated();
+            }
+
         } catch (error) {
-          console.error("Error deleting post: ", error);
-          alert('삭제에 실패했습니다.');
+            console.error("Error deleting post: ", error);
+            alert('삭제에 실패했습니다.');
         }
-      }
+    }
   };
 
   return (
     <div className={styles.threadSection}>
-      <h3 className={styles.threadTitle}>타임라인</h3>
       {user && (
         <form onSubmit={handleAddPost} className={styles.threadForm}>
           <textarea
@@ -199,7 +230,7 @@ function Thread({ cat, isAdmin, onPostCreated }) {
             {(isAdmin || (user && user.uid === post.userId)) && (
               <button
                 className={styles.deleteThreadBtn}
-                onClick={() => handleDeletePost(post.id)}
+                onClick={() => handleDeletePost(post)}
                 title="글 삭제"
               >
                 &times;

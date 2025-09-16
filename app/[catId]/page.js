@@ -5,10 +5,20 @@ import { useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc, deleteDoc, writeBatch, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth, storage } from '../../lib/firebase/clientApp';
 import { onAuthStateChanged } from 'firebase/auth';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import imageCompression from "browser-image-compression";
 import styles from './catProfile.module.css';
-import Thread from '../../components/Thread'; // Thread 컴포넌트 import
+import Thread from '../../components/Thread';
+
+// Swiper 관련 import 추가
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination, Keyboard } from 'swiper/modules';
+
+// Swiper 기본 스타일 import
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+
 
 // 날짜 포맷 함수 추가
 const formatDate = (date) => {
@@ -81,11 +91,76 @@ export default function CatProfile({ params }) {
   }, [catId]);
 
   const handleUpdateCat = async () => {
-    // ... (기존 코드와 동일)
+    if (!catId || !editedName.trim()) {
+        alert('고양이 이름은 비워둘 수 없습니다.');
+        return;
+    }
+    try {
+        const catDocRef = doc(db, 'cats', catId);
+        await updateDoc(catDocRef, {
+            name: editedName,
+            description: editedDescription,
+        });
+
+        // catName이 변경되었다면 관련된 사진들의 catName도 업데이트
+        if (cat.name !== editedName) {
+            const batch = writeBatch(db);
+            const photosQuery = query(collection(db, "photos"), where("catId", "==", catId));
+            const photosSnapshot = await getDocs(photosQuery);
+            photosSnapshot.forEach((photoDoc) => {
+                batch.update(photoDoc.ref, { catName: editedName });
+            });
+            await batch.commit();
+        }
+
+        alert('도감 정보가 수정되었습니다.');
+        setIsEditing(false);
+        fetchCatData(); // 최신 정보 다시 불러오기
+    } catch (error) {
+        console.error("Error updating cat:", error);
+        alert('정보 수정에 실패했습니다.');
+    }
   };
 
   const handleDeleteCat = async () => {
-    // ... (기존 코드와 동일)
+    if (!catId || !confirm(`'${cat.name}' 도감을 정말로 삭제하시겠습니까?\n관련된 모든 사진과 타임라인 기록이 영구적으로 삭제됩니다.`)) return;
+
+    try {
+        const batch = writeBatch(db);
+
+        // 1. 관련된 모든 사진 삭제 (Firestore)
+        const photosQuery = query(collection(db, 'photos'), where('catId', '==', catId));
+        const photosSnapshot = await getDocs(photosQuery);
+        photosSnapshot.forEach(doc => {
+            // Storage에서 이미지 파일 삭제
+            const photoData = doc.data();
+            if (photoData.imageUrl) {
+                const imageRef = ref(storage, photoData.imageUrl);
+                deleteObject(imageRef).catch(err => console.error("Error deleting image from storage:", err));
+            }
+            batch.delete(doc.ref);
+        });
+
+        // 2. 관련된 모든 타임라인(스레드) 삭제
+        const threadsQuery = query(collection(db, 'threads'), where('catId', '==', catId));
+        const threadsSnapshot = await getDocs(threadsQuery);
+        threadsSnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        // 3. 고양이 도감 문서 삭제
+        const catDocRef = doc(db, 'cats', catId);
+        batch.delete(catDocRef);
+
+        // 4. 일괄 작업 실행
+        await batch.commit();
+
+        alert('도감이 삭제되었습니다.');
+        router.push('/'); // 홈페이지로 이동
+    } catch (error) {
+        console.error("Error deleting cat and related data:", error);
+        alert('도감 삭제에 실패했습니다.');
+    }
   };
 
   const handleFileSelect = async (e) => {
@@ -180,23 +255,31 @@ export default function CatProfile({ params }) {
       </header>
       
       <main>
-        <div className={styles.galleryHeader}>
-          <h3>사진첩</h3>
-        </div>
-        <div className={styles.gallery}>
-          {photos.length > 0 ? (
-            photos.map(photo => (
-              <div key={photo.id} className={styles.photoContainer}>
-                <img src={photo.imageUrl} alt={`${cat.name} 사진`} className={styles.photo} />
-              </div>
-            ))
-          ) : (
-            <p className={styles.message}>아직 등록된 사진이 없습니다.</p>
-          )}
-        </div>
         
-        {/* Thread 컴포넌트 추가 */}
-        <Thread catId={catId} isAdmin={user && user.email === 'cutiefunny@gmail.com'} />
+        {photos.length > 0 ? (
+          <div className={styles.sliderContainer}>
+            <Swiper
+              modules={[Navigation, Pagination, Keyboard]}
+              spaceBetween={20}
+              slidesPerView={1}
+              navigation
+              pagination={{ clickable: true }}
+              keyboard={{ enabled: true }}
+              loop={true}
+            >
+              {photos.map(photo => (
+                <SwiperSlide key={photo.id}>
+                  <img src={photo.imageUrl} alt={`${cat.name} 사진`} />
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          </div>
+        ) : (
+          <p className={styles.message}>아직 등록된 사진이 없습니다.</p>
+        )}
+        
+        {/* Thread 컴포넌트 추가 및 cat 객체 전달 */}
+        <Thread cat={cat} isAdmin={user && user.email === 'cutiefunny@gmail.com'} onPostCreated={fetchCatData} />
       </main>
     </div>
   );
