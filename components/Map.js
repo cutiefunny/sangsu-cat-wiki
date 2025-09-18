@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 
 const MAX_ZOOM_LEVEL_FOR_PHOTO = 18;
+const REGULAR_ICON_STYLE = 'width: 60px; height: 60px; border-radius: 50%; background-image: url({imageUrl}); background-size: cover; background-position: center center; border: 3px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.5);';
+const HIGHLIGHTED_ICON_STYLE = 'width: 70px; height: 70px; border-radius: 50%; background-image: url({imageUrl}); background-size: cover; background-position: center center; border: 4px solid #007bff; box-shadow: 0 0 12px rgba(0,123,255,0.8);';
 
-function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerClick, onBoundsChange }) {
+function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerClick, onBoundsChange, center, selectedPhoto }) {
   const mapElement = useRef(null);
   const mapInstance = useRef(null);
   const draggableMarkerRef = useRef(null);
@@ -14,18 +16,49 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
   useEffect(() => {
     const { naver } = window;
     if (!mapElement.current || !naver) return;
-    const mapOptions = {
-      center: new naver.maps.LatLng(37.548, 126.923),
-      zoom: 15,
-      zoomControl: true,
+
+    // 지도 초기화 함수
+    const initializeMap = (centerLatLng) => {
+      const mapOptions = {
+        center: centerLatLng,
+        zoom: 15,
+        zoomControl: true,
+      };
+      const map = new naver.maps.Map(mapElement.current, mapOptions);
+      mapInstance.current = map;
+      setCurrentZoom(map.getZoom());
+      naver.maps.Event.addListener(map, 'zoom_changed', () => setCurrentZoom(map.getZoom()));
     };
-    const map = new naver.maps.Map(mapElement.current, mapOptions);
-    mapInstance.current = map;
-    setCurrentZoom(map.getZoom());
-    naver.maps.Event.addListener(map, 'zoom_changed', () => setCurrentZoom(map.getZoom()));
+
+    // 기본 위치 (서울 상수동 부근)
+    const defaultLocation = new naver.maps.LatLng(37.548, 126.923);
+
+    // Geolocation API를 사용하여 현재 위치 가져오기
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          // 성공 시: 현재 위치를 지도의 중심으로 설정
+          const currentLocation = new naver.maps.LatLng(position.coords.latitude, position.coords.longitude);
+          initializeMap(currentLocation);
+        },
+        () => {
+          // 실패 시: 기본 위치로 설정
+          initializeMap(defaultLocation);
+        }
+      );
+    } else {
+      // Geolocation API를 지원하지 않는 경우 기본 위치로 설정
+      initializeMap(defaultLocation);
+    }
   }, []);
 
-  // 지도 경계가 변경될 때 보이는 사진을 업데이트하는 로직을 별도의 useEffect로 분리
+  useEffect(() => {
+    if (mapInstance.current && center) {
+      const { naver } = window;
+      mapInstance.current.panTo(new naver.maps.LatLng(center.lat, center.lng));
+    }
+  }, [center]);
+
   useEffect(() => {
     if (!mapInstance.current) return;
     const { naver } = window;
@@ -38,18 +71,13 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
       onBoundsChange(visible);
     };
 
-    // 'idle' 이벤트 리스너 등록
     const listener = naver.maps.Event.addListener(mapInstance.current, 'idle', updateVisiblePhotos);
-    
-    // 초기 로드 시에도 한 번 실행
     updateVisiblePhotos();
 
-    // useEffect cleanup 함수: 컴포넌트가 리렌더링되기 전에 리스너를 제거
     return () => {
       naver.maps.Event.removeListener(listener);
     };
-  }, [photos, onBoundsChange]); // photos가 바뀔 때마다 리스너를 새로 등록
-
+  }, [photos, onBoundsChange]);
 
   useEffect(() => {
     if (!mapInstance.current) return;
@@ -78,17 +106,25 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
   useEffect(() => {
     if (!mapInstance.current) return;
     const { naver } = window;
+
     existingMarkersRef.current.forEach(({ photo, marker }) => {
+      const isSelected = selectedPhoto && selectedPhoto.id === photo.id;
+
       if (currentZoom >= MAX_ZOOM_LEVEL_FOR_PHOTO) {
+        const style = isSelected ? HIGHLIGHTED_ICON_STYLE : REGULAR_ICON_STYLE;
+        const anchor = isSelected ? new naver.maps.Point(35, 35) : new naver.maps.Point(30, 30);
+        
         marker.setIcon({
-          content: `<div style="width: 60px; height: 60px; border-radius: 50%; background-image: url(${photo.imageUrl}); background-size: cover; background-position: center center; border: 3px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.5);"></div>`,
-          anchor: new naver.maps.Point(30, 30),
+          content: `<div style="${style.replace('{imageUrl}', photo.imageUrl)}"></div>`,
+          anchor: anchor,
         });
+        marker.setZIndex(isSelected ? 100 : 1);
       } else {
         marker.setIcon(null);
+        marker.setZIndex(isSelected ? 100 : 1);
       }
     });
-  }, [currentZoom, photos]);
+  }, [currentZoom, photos, selectedPhoto]);
 
   useEffect(() => {
     const { naver } = window;

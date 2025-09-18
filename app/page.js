@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react"; // useRef 추가
+import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import ImageUpload from "../components/ImageUpload";
 import Modal from "../components/Modal";
@@ -8,7 +8,6 @@ import LoginModal from "../components/LoginModal";
 import ProfileModal from "../components/ProfileModal";
 import PhotoGallery from "../components/PhotoGallery";
 import CreateCatProfileModal from "../components/CreateCatProfileModal";
-// 새로 추가된 Toast 컴포넌트를 import 합니다.
 import Toast from "../components/Toast";
 import { db, storage, auth, provider } from "../lib/firebase/clientApp";
 import {
@@ -51,9 +50,9 @@ export default function Home() {
   
   const [showCreateCatProfileModal, setShowCreateCatProfileModal] = useState(false);
   const [photoToCreateProfileFor, setPhotoToCreateProfileFor] = useState(null);
-  // 종료 토스트 메시지를 위한 상태 변수
   const [showExitToast, setShowExitToast] = useState(false);
   const backPressRef = useRef(false);
+  const [mapCenter, setMapCenter] = useState(null);
 
   const isAdmin = user && user.email === "cutiefunny@gmail.com";
 
@@ -76,7 +75,6 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  // 뒤로가기 버튼 감지 로직 (토스트 방식)
   useEffect(() => {
     window.history.pushState(null, '', window.location.href);
 
@@ -85,16 +83,13 @@ export default function Home() {
         backPressRef.current = true;
         setShowExitToast(true);
 
-        // 2초 후에 상태를 초기화
         setTimeout(() => {
           backPressRef.current = false;
           setShowExitToast(false);
         }, 2000);
 
-        // 사용자가 바로 나가는 것을 방지하기 위해 history에 다시 push
         window.history.pushState(null, '', window.location.href);
       } else {
-        // 두 번째 뒤로가기 시 앱 종료
         window.history.back();
       }
     };
@@ -243,6 +238,13 @@ export default function Home() {
   const handleMarkerClick = useCallback((photo) => { setSelectedPhoto(photo); setIsModalOpen(true); }, []);
   const handleCloseModal = useCallback(() => { setIsModalOpen(false); setSelectedPhoto(null); }, []);
   const handleBoundsChange = useCallback((newVisiblePhotos) => { setVisiblePhotos(newVisiblePhotos); }, []);
+  
+  const handleGalleryPhotoClick = (photo) => {
+    setMapCenter({ lat: photo.lat, lng: photo.lng });
+    setSelectedPhoto(photo);
+    setIsModalOpen(true);
+  };
+
   const handleDeletePhoto = useCallback(async (photoId, imageUrl) => {
     if (!isAdmin) { alert("삭제 권한이 없습니다."); return; }
     if (confirm("정말로 이 사진을 삭제하시겠습니까?")) {
@@ -261,14 +263,12 @@ export default function Home() {
   }, [isAdmin, fetchPhotos, handleCloseModal]);
   const handleLoginRequest = () => { setShowLoginModal(true); };
 
-  // '도감 만들기' 모달을 여는 함수
   const handleOpenCreateCatProfileModal = useCallback((photo) => {
     setPhotoToCreateProfileFor(photo);
     setShowCreateCatProfileModal(true);
-    setIsModalOpen(false); // 기존 사진 상세 모달은 닫기
+    setIsModalOpen(false);
   }, []);
 
-  // 새로운 고양이 프로필을 저장하는 함수
   const handleSaveCatProfile = useCallback(async (catData) => {
     if (!user) {
       alert("로그인이 필요합니다.");
@@ -280,14 +280,12 @@ export default function Home() {
     }
 
     try {
-      // 1. 'cats' 컬렉션에 새로운 고양이 정보 추가
       const newCatRef = await addDoc(collection(db, 'cats'), {
         ...catData,
         createdAt: new Date(),
         createdBy: user.uid,
       });
 
-      // 2. 'photos' 컬렉션의 해당 사진 문서에 catId와 catName 업데이트
       const photoDocRef = doc(db, 'photos', photoToCreateProfileFor.id);
       await updateDoc(photoDocRef, {
         catId: newCatRef.id,
@@ -297,7 +295,7 @@ export default function Home() {
       alert(`'${catData.name}' 도감이 생성되었습니다.`);
       setShowCreateCatProfileModal(false);
       setPhotoToCreateProfileFor(null);
-      await fetchPhotos(); // 전체 사진 목록 새로고침
+      await fetchPhotos();
 
     } catch (error) {
       console.error("Error saving cat profile: ", error);
@@ -326,8 +324,17 @@ export default function Home() {
           </button>
         </div>
       )}
-      <Map photos={photos} tempMarker={tempMarker} onTempMarkerChange={handleTempMarkerChange} isConfirming={isConfirming} onMarkerClick={handleMarkerClick} onBoundsChange={handleBoundsChange} />
-      <PhotoGallery photos={visiblePhotos} onPhotoClick={handleMarkerClick} />
+      <Map 
+        photos={photos} 
+        tempMarker={tempMarker} 
+        onTempMarkerChange={handleTempMarkerChange} 
+        isConfirming={isConfirming} 
+        onMarkerClick={handleMarkerClick} 
+        onBoundsChange={handleBoundsChange}
+        center={mapCenter}
+        selectedPhoto={selectedPhoto} 
+      />
+      <PhotoGallery photos={visiblePhotos} onPhotoClick={handleGalleryPhotoClick} />
       
       <Toast message="뒤로 가기를 한 번 더 누르면 앱이 종료됩니다." show={showExitToast} />
 
