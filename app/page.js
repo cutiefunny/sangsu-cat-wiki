@@ -1,16 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react"; // useRef 추가
 import dynamic from "next/dynamic";
 import ImageUpload from "../components/ImageUpload";
 import Modal from "../components/Modal";
 import LoginModal from "../components/LoginModal";
 import ProfileModal from "../components/ProfileModal";
 import PhotoGallery from "../components/PhotoGallery";
-// CreateCatProfileModal을 import 합니다.
 import CreateCatProfileModal from "../components/CreateCatProfileModal";
-// 새로 추가된 종료 확인 모달을 import 합니다.
-import ExitConfirmModal from "../components/ExitConfirmModal";
+// 새로 추가된 Toast 컴포넌트를 import 합니다.
+import Toast from "../components/Toast";
 import { db, storage, auth, provider } from "../lib/firebase/clientApp";
 import {
   collection, getDocs, addDoc, doc, deleteDoc, query, where, writeBatch, getDoc, setDoc, updateDoc
@@ -50,11 +49,11 @@ export default function Home() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [visiblePhotos, setVisiblePhotos] = useState([]);
   
-  // 새로운 상태 변수 추가
   const [showCreateCatProfileModal, setShowCreateCatProfileModal] = useState(false);
   const [photoToCreateProfileFor, setPhotoToCreateProfileFor] = useState(null);
-  // 종료 확인 모달을 위한 상태 변수 추가
-  const [showExitModal, setShowExitModal] = useState(false);
+  // 종료 토스트 메시지를 위한 상태 변수
+  const [showExitToast, setShowExitToast] = useState(false);
+  const backPressRef = useRef(false);
 
   const isAdmin = user && user.email === "cutiefunny@gmail.com";
 
@@ -77,15 +76,27 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  // 뒤로가기 버튼 감지 로직
+  // 뒤로가기 버튼 감지 로직 (토스트 방식)
   useEffect(() => {
-    // 현재 페이지를 history에 한 번 더 추가하여 뒤로가기 시 popstate 이벤트가 발생하도록 함
     window.history.pushState(null, '', window.location.href);
-    
+
     const handlePopState = (event) => {
-      // 뒤로가기 시 다시 현재 페이지로 돌려놓고 종료 모달을 띄움
-      window.history.pushState(null, '', window.location.href);
-      setShowExitModal(true);
+      if (!backPressRef.current) {
+        backPressRef.current = true;
+        setShowExitToast(true);
+
+        // 2초 후에 상태를 초기화
+        setTimeout(() => {
+          backPressRef.current = false;
+          setShowExitToast(false);
+        }, 2000);
+
+        // 사용자가 바로 나가는 것을 방지하기 위해 history에 다시 push
+        window.history.pushState(null, '', window.location.href);
+      } else {
+        // 두 번째 뒤로가기 시 앱 종료
+        window.history.back();
+      }
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -293,15 +304,6 @@ export default function Home() {
       alert("도감 생성에 실패했습니다.");
     }
   }, [user, photoToCreateProfileFor, fetchPhotos]);
-  
-  // 종료 확인 모달 핸들러
-  const handleConfirmExit = () => {
-    window.history.back();
-  };
-
-  const handleCancelExit = () => {
-    setShowExitModal(false);
-  };
 
   return (
     <div>
@@ -327,6 +329,8 @@ export default function Home() {
       <Map photos={photos} tempMarker={tempMarker} onTempMarkerChange={handleTempMarkerChange} isConfirming={isConfirming} onMarkerClick={handleMarkerClick} onBoundsChange={handleBoundsChange} />
       <PhotoGallery photos={visiblePhotos} onPhotoClick={handleMarkerClick} />
       
+      <Toast message="뒤로 가기를 한 번 더 누르면 앱이 종료됩니다." show={showExitToast} />
+
       {isModalOpen && (
         <Modal
           photo={selectedPhoto}
@@ -334,7 +338,7 @@ export default function Home() {
           isAdmin={isAdmin}
           onDelete={handleDeletePhoto}
           onLoginRequest={handleLoginRequest}
-          onCreateCatProfile={handleOpenCreateCatProfileModal} // prop 전달
+          onCreateCatProfile={handleOpenCreateCatProfileModal}
         />
       )}
 
@@ -342,14 +346,6 @@ export default function Home() {
         <CreateCatProfileModal
           onClose={() => setShowCreateCatProfileModal(false)}
           onSave={handleSaveCatProfile}
-        />
-      )}
-      
-      {/* 종료 확인 모달 렌더링 */}
-      {showExitModal && (
-        <ExitConfirmModal
-          onConfirm={handleConfirmExit}
-          onCancel={handleCancelExit}
         />
       )}
 

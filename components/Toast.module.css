@@ -1,0 +1,23 @@
+/* components/Toast.module.css */
+.toast {
+  visibility: hidden;
+  min-width: 250px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  text-align: center;
+  border-radius: 8px;
+  padding: 16px;
+  position: fixed;
+  z-index: 1200;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 50px;
+  font-size: 16px;
+  opacity: 0;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+
+.toast.show {
+  visibility: visible;
+  opacity: 1;
+}
