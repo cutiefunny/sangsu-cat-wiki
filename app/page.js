@@ -9,6 +9,8 @@ import ProfileModal from "../components/ProfileModal";
 import PhotoGallery from "../components/PhotoGallery";
 // CreateCatProfileModal을 import 합니다.
 import CreateCatProfileModal from "../components/CreateCatProfileModal";
+// 새로 추가된 종료 확인 모달을 import 합니다.
+import ExitConfirmModal from "../components/ExitConfirmModal";
 import { db, storage, auth, provider } from "../lib/firebase/clientApp";
 import {
   collection, getDocs, addDoc, doc, deleteDoc, query, where, writeBatch, getDoc, setDoc, updateDoc
@@ -51,6 +53,8 @@ export default function Home() {
   // 새로운 상태 변수 추가
   const [showCreateCatProfileModal, setShowCreateCatProfileModal] = useState(false);
   const [photoToCreateProfileFor, setPhotoToCreateProfileFor] = useState(null);
+  // 종료 확인 모달을 위한 상태 변수 추가
+  const [showExitModal, setShowExitModal] = useState(false);
 
   const isAdmin = user && user.email === "cutiefunny@gmail.com";
 
@@ -72,6 +76,25 @@ export default function Home() {
     });
     return () => unsubscribe();
   }, []);
+
+  // 뒤로가기 버튼 감지 로직
+  useEffect(() => {
+    // 현재 페이지를 history에 한 번 더 추가하여 뒤로가기 시 popstate 이벤트가 발생하도록 함
+    window.history.pushState(null, '', window.location.href);
+    
+    const handlePopState = (event) => {
+      // 뒤로가기 시 다시 현재 페이지로 돌려놓고 종료 모달을 띄움
+      window.history.pushState(null, '', window.location.href);
+      setShowExitModal(true);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
 
   const fetchPhotos = useCallback(async () => {
     const querySnapshot = await getDocs(collection(db, "photos"));
@@ -270,6 +293,15 @@ export default function Home() {
       alert("도감 생성에 실패했습니다.");
     }
   }, [user, photoToCreateProfileFor, fetchPhotos]);
+  
+  // 종료 확인 모달 핸들러
+  const handleConfirmExit = () => {
+    window.history.back();
+  };
+
+  const handleCancelExit = () => {
+    setShowExitModal(false);
+  };
 
   return (
     <div>
@@ -310,6 +342,14 @@ export default function Home() {
         <CreateCatProfileModal
           onClose={() => setShowCreateCatProfileModal(false)}
           onSave={handleSaveCatProfile}
+        />
+      )}
+      
+      {/* 종료 확인 모달 렌더링 */}
+      {showExitModal && (
+        <ExitConfirmModal
+          onConfirm={handleConfirmExit}
+          onCancel={handleCancelExit}
         />
       )}
 

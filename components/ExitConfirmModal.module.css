@@ -1,0 +1,62 @@
+/* components/ExitConfirmModal.module.css */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100; /* 다른 모달보다 위에 표시되도록 z-index를 높게 설정 */
+}
+
+.modal {
+  background-color: white;
+  padding: 25px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 300px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.modal p {
+  font-size: 18px;
+  margin: 0 0 20px;
+}
+
+.buttonGroup {
+  display: flex;
+  justify-content: space-around;
+  gap: 10px;
+}
+
+.buttonGroup button {
+  flex: 1;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cancelButton {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.cancelButton:hover {
+  background-color: #e0e0e0;
+}
+
+.confirmButton {
+  background-color: #007bff;
+  color: white;
+}
+
+.confirmButton:hover {
+  background-color: #0056b3;
+}
