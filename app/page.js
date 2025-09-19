@@ -20,7 +20,7 @@ import {
   updateDoc,
   getDocs,
   addDoc,
-  doc, // 'doc' 함수를 여기에 추가합니다.
+  doc,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import {
@@ -34,7 +34,6 @@ import EXIF from "exif-js";
 import pageStyles from "./page.module.css";
 import buttonStyles from "../components/controls.module.css";
 
-// 분리된 photoService를 import 합니다.
 import {
   fetchAllPhotos,
   uploadPhoto,
@@ -112,7 +111,6 @@ export default function Home() {
     };
   }, []);
 
-  // photoService의 fetchAllPhotos 함수를 사용하도록 수정
   const fetchPhotos = useCallback(async () => {
     const photosData = await fetchAllPhotos();
     setPhotos(photosData);
@@ -228,9 +226,11 @@ export default function Home() {
             const lngRef = EXIF.getTag(this, "GPSLongitudeRef");
             position = {
               lat:
-                (lat[0] + lat[1] / 60 + lat[2] / 3600) * (latRef === "N" ? 1 : -1),
+                (lat[0] + lat[1] / 60 + lat[2] / 3600) *
+                (latRef === "N" ? 1 : -1),
               lng:
-                (lng[0] + lng[1] / 60 + lng[2] / 3600) * (lngRef === "E" ? 1 : -1),
+                (lng[0] + lng[1] / 60 + lng[2] / 3600) *
+                (lngRef === "E" ? 1 : -1),
             };
           } else {
             position = await new Promise((resolve, reject) => {
@@ -261,7 +261,6 @@ export default function Home() {
     setTempMarker(position);
   }, []);
 
-  // photoService의 uploadPhoto 함수를 사용하도록 수정
   const handleConfirmUpload = useCallback(async () => {
     if (!selectedImage || !tempMarker || !user) return;
     setIsUploading(true);
@@ -300,7 +299,6 @@ export default function Home() {
     setIsModalOpen(true);
   };
 
-  // photoService의 deletePhoto 함수를 사용하도록 수정
   const handleDeletePhoto = useCallback(
     async (photoId, imageUrl) => {
       if (!isAdmin) {
@@ -436,6 +434,7 @@ export default function Home() {
           onDelete={handleDeletePhoto}
           onLoginRequest={handleLoginRequest}
           onCreateCatProfile={handleOpenCreateCatProfileModal}
+          user={user} 
         />
       )}
 
