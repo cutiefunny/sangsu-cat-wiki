@@ -2,6 +2,8 @@
 
 import { useEffect, useState, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link'; // Link import
+import Image from 'next/image'; // Image import
 import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc, deleteDoc, writeBatch, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth, storage } from '../../lib/firebase/clientApp';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -9,7 +11,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage
 import imageCompression from "browser-image-compression";
 import styles from './catProfile.module.css';
 import Thread from '../../components/Thread';
-import CatProfileSkeleton from '../../components/CatProfileSkeleton'; // 스켈레톤 컴포넌트 import
+import TagInput from '../../components/TagInput';
 
 // Swiper 관련 import 추가
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -40,6 +42,7 @@ export default function CatProfile({ params }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
+  const [editedTags, setEditedTags] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
 
   const fileInputRef = useRef(null);
@@ -66,6 +69,7 @@ export default function CatProfile({ params }) {
         setCat(catData);
         setEditedName(catData.name);
         setEditedDescription(catData.description || '');
+        setEditedTags(catData.tags || []);
 
         const photosQuery = query(
           collection(db, 'photos'),
@@ -86,7 +90,9 @@ export default function CatProfile({ params }) {
   };
 
   useEffect(() => {
-    fetchCatData();
+    if(catId) {
+      fetchCatData();
+    }
   }, [catId]);
 
   const handleUpdateCat = async () => {
@@ -99,9 +105,9 @@ export default function CatProfile({ params }) {
         await updateDoc(catDocRef, {
             name: editedName,
             description: editedDescription,
+            tags: editedTags,
         });
 
-        // catName이 변경되었다면 관련된 사진들의 catName도 업데이트
         if (cat.name !== editedName) {
             const batch = writeBatch(db);
             const photosQuery = query(collection(db, "photos"), where("catId", "==", catId));
@@ -114,7 +120,7 @@ export default function CatProfile({ params }) {
 
         alert('도감 정보가 수정되었습니다.');
         setIsEditing(false);
-        fetchCatData(); // 최신 정보 다시 불러오기
+        fetchCatData();
     } catch (error) {
         console.error("Error updating cat:", error);
         alert('정보 수정에 실패했습니다.');
@@ -127,11 +133,9 @@ export default function CatProfile({ params }) {
     try {
         const batch = writeBatch(db);
 
-        // 1. 관련된 모든 사진 삭제 (Firestore)
         const photosQuery = query(collection(db, 'photos'), where('catId', '==', catId));
         const photosSnapshot = await getDocs(photosQuery);
         photosSnapshot.forEach(doc => {
-            // Storage에서 이미지 파일 삭제
             const photoData = doc.data();
             if (photoData.imageUrl) {
                 const imageRef = ref(storage, photoData.imageUrl);
@@ -140,22 +144,19 @@ export default function CatProfile({ params }) {
             batch.delete(doc.ref);
         });
 
-        // 2. 관련된 모든 타임라인(스레드) 삭제
         const threadsQuery = query(collection(db, 'threads'), where('catId', '==', catId));
         const threadsSnapshot = await getDocs(threadsQuery);
         threadsSnapshot.forEach(doc => {
             batch.delete(doc.ref);
         });
 
-        // 3. 고양이 도감 문서 삭제
         const catDocRef = doc(db, 'cats', catId);
         batch.delete(catDocRef);
 
-        // 4. 일괄 작업 실행
         await batch.commit();
 
         alert('도감이 삭제되었습니다.');
-        router.push('/'); // 홈페이지로 이동
+        router.push('/');
     } catch (error) {
         console.error("Error deleting cat and related data:", error);
         alert('도감 삭제에 실패했습니다.');
@@ -179,10 +180,9 @@ export default function CatProfile({ params }) {
       const snapshot = await uploadBytes(storageRef, compressedFile, metadata);
       const url = await getDownloadURL(snapshot.ref);
 
-      // Firestore에 사진 정보 추가
       await addDoc(collection(db, "photos"), {
         imageUrl: url,
-        lat: photos.length > 0 ? photos[0].lat : 0, // 첫번째 사진의 위치 사용 또는 기본값
+        lat: photos.length > 0 ? photos[0].lat : 0,
         lng: photos.length > 0 ? photos[0].lng : 0,
         createdAt: serverTimestamp(),
         userId: user.uid,
@@ -193,26 +193,28 @@ export default function CatProfile({ params }) {
       });
 
       alert("사진이 도감에 추가되었습니다.");
-      fetchCatData(); // 사진 목록 새로고침
-
+      fetchCatData();
     } catch (error) {
       console.error("Upload failed:", error);
       alert("업로드에 실패했습니다.");
     } finally {
       setIsUploading(false);
-      // 입력값 초기화
       e.target.value = null;
     }
   };
 
-
   const canEdit = user && (user.email === 'cutiefunny@gmail.com' || user.uid === cat?.createdBy);
 
-  if (loading) return <CatProfileSkeleton />;
+  if (loading) return <div className={styles.message}>로딩 중...</div>;
   if (!cat) return <div className={styles.message}>존재하지 않는 고양이입니다.</div>;
 
   return (
     <div className={styles.container}>
+      {/* 홈으로 가는 로고 링크 추가 */}
+      <Link href="/" className={styles.homeLink}>
+        <Image src="/images/icon.png" alt="홈으로" width={40} height={40} />
+      </Link>
+
       <header className={styles.header}>
         {isEditing ? (
           <div className={styles.editForm}>
@@ -228,11 +230,20 @@ export default function CatProfile({ params }) {
               className={styles.descriptionInput}
               rows="3"
             />
+            <label>태그 (입력 후 Enter)</label>
+            <TagInput tags={editedTags} setTags={setEditedTags} />
           </div>
         ) : (
           <>
             <h1 className={styles.name}>{cat.name}</h1>
             {cat.description && <p className={styles.description}>{cat.description}</p>}
+            {cat.tags && cat.tags.length > 0 && (
+              <ul className={styles.tagList}>
+                {cat.tags.map(tag => (
+                  <li key={tag} className={styles.tagItem}>#{tag}</li>
+                ))}
+              </ul>
+            )}
           </>
         )}
         
@@ -254,7 +265,6 @@ export default function CatProfile({ params }) {
       </header>
       
       <main>
-        
         {photos.length > 0 ? (
           <div className={styles.sliderContainer}>
             <Swiper
@@ -277,7 +287,6 @@ export default function CatProfile({ params }) {
           <p className={styles.message}>아직 등록된 사진이 없습니다.</p>
         )}
         
-        {/* Thread 컴포넌트 추가 및 cat 객체 전달 */}
         <Thread cat={cat} isAdmin={user && user.email === 'cutiefunny@gmail.com'} onPostCreated={fetchCatData} />
       </main>
     </div>

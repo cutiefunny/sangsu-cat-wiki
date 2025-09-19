@@ -1,11 +1,12 @@
-// components/CreateCatProfileModal.js
 import React, { useState } from 'react';
 import styles from './CreateCatProfileModal.module.css';
+import TagInput from './TagInput'; // TagInput 컴포넌트 import
 
 function CreateCatProfileModal({ onClose, onSave }) {
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [description, setDescription] = useState('');
+  const [tags, setTags] = useState([]); // 태그 상태 추가
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -19,6 +20,7 @@ function CreateCatProfileModal({ onClose, onSave }) {
       name: name.trim(),
       age: age.trim(),
       description: description.trim(),
+      tags: tags, // 저장 데이터에 태그 추가
     });
     setIsLoading(false);
   };
@@ -58,6 +60,11 @@ function CreateCatProfileModal({ onClose, onSave }) {
               placeholder="특징이나 자주 나타나는 장소를 알려주세요"
               rows="4"
             />
+          </div>
+          {/* TagInput 컴포넌트 추가 */}
+          <div className={styles.formGroup}>
+            <label>태그 (입력 후 Enter)</label>
+            <TagInput tags={tags} setTags={setTags} />
           </div>
           <div className={styles.buttonGroup}>
             <button type="button" onClick={onClose} disabled={isLoading} className={styles.cancelButton}>

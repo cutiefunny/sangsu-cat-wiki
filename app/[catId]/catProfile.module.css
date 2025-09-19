@@ -4,6 +4,15 @@
   margin: 0 auto;
   padding: 20px;
   font-family: sans-serif;
+  position: relative; /* 홈 아이콘 위치의 기준이 되도록 설정 */
+}
+
+/* 홈 아이콘 링크 스타일 추가 */
+.homeLink {
+  position: absolute;
+  top: 12px;
+  left: 20px;
+  z-index: 10; /* 다른 요소들 위에 표시되도록 설정 */
 }
 
 .header {
@@ -24,6 +33,25 @@
 .description {
   font-size: 1.1em;
   color: #666;
+  margin-bottom: 15px; /* 태그와의 간격을 위해 추가 */
+}
+
+.tagList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tagItem {
+  background-color: #f0f0f0;
+  color: #555;
+  padding: 5px 12px;
+  border-radius: 15px;
+  font-size: 0.9em;
 }
 
 .galleryHeader {
@@ -64,29 +92,20 @@
 /* --- 여기부터 화살표 커스텀 스타일 --- */
 .sliderContainer :global(.swiper-button-prev),
 .sliderContainer :global(.swiper-button-next) {
-  /* 화살표의 색상을 흰색으로 변경 */
   color: white; 
-  /* 배경을 약간 어둡게 하여 흰색 화살표가 잘 보이도록 함 */
-  /* background-color: rgba(0, 0, 0, 0.2);  */
-  /* 동그랗게 만들기 */
   border-radius: 50%; 
-  /* 크기 줄이기 */
   width: 30px; 
   height: 30px;
-  /* 화살표 아이콘 크기 줄이기 */
   transform: scale(0.6); 
-  /* 그림자 효과로 입체감 주기 */
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
-/* 화살표 아이콘의 기본 스타일 오버라이드 */
 .sliderContainer :global(.swiper-button-prev)::after,
 .sliderContainer :global(.swiper-button-next)::after {
   font-size: 20px !important;
   font-weight: bold;
 }
 
-/* 화살표 위치를 하단으로 조정 (기본값은 중앙) */
 .sliderContainer :global(.swiper-button-prev) {
   left: 15px;
 }
@@ -151,6 +170,14 @@
   flex-direction: column;
   gap: 10px;
   margin-bottom: 20px;
+}
+
+.editForm label {
+  text-align: left;
+  font-weight: bold;
+  font-size: 0.9em;
+  color: #555;
+  margin-top: 5px;
 }
 
 .nameInput,

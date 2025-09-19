@@ -1,0 +1,50 @@
+.tagInputContainer {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 5px;
+  cursor: text;
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 5px;
+}
+
+.tag {
+  background-color: #007bff;
+  color: white;
+  padding: 5px 8px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+}
+
+.removeTagButton {
+  background: none;
+  border: none;
+  color: white;
+  margin-left: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  line-height: 1;
+}
+
+.tagInput {
+  flex-grow: 1;
+}
+
+.tagInput input {
+  border: none;
+  outline: none;
+  padding: 5px;
+  width: 100%;
+  min-width: 120px;
+  background-color: transparent;
+}
