@@ -9,6 +9,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage
 import imageCompression from "browser-image-compression";
 import styles from './catProfile.module.css';
 import Thread from '../../components/Thread';
+import CatProfileSkeleton from '../../components/CatProfileSkeleton'; // 스켈레톤 컴포넌트 import
 
 // Swiper 관련 import 추가
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -18,7 +19,6 @@ import { Navigation, Pagination, Keyboard } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
-
 
 // 날짜 포맷 함수 추가
 const formatDate = (date) => {
@@ -31,7 +31,6 @@ const formatDate = (date) => {
   const seconds = pad(date.getSeconds());
   return `${year}${month}${day}${hours}${minutes}${seconds}`;
 };
-
 
 export default function CatProfile({ params }) {
   const [cat, setCat] = useState(null);
@@ -209,7 +208,7 @@ export default function CatProfile({ params }) {
 
   const canEdit = user && (user.email === 'cutiefunny@gmail.com' || user.uid === cat?.createdBy);
 
-  if (loading) return <div className={styles.message}>로딩 중...</div>;
+  if (loading) return <CatProfileSkeleton />;
   if (!cat) return <div className={styles.message}>존재하지 않는 고양이입니다.</div>;
 
   return (

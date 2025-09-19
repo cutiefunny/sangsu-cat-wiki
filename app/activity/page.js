@@ -6,6 +6,7 @@ import { db, auth } from '../../lib/firebase/clientApp';
 import { onAuthStateChanged } from 'firebase/auth';
 import styles from './activity.module.css';
 import Link from 'next/link';
+import PhotoCardSkeleton from '../../components/PhotoCardSkeleton'; // 스켈레톤 컴포넌트 import
 
 export default function ActivityPage() {
   const [user, setUser] = useState(null);
@@ -69,7 +70,23 @@ export default function ActivityPage() {
   };
 
   if (loading) {
-    return <div className={styles.message}>로딩 중...</div>;
+    return (
+      <div className={styles.container}>
+        <header className={styles.header}>
+          <h1>내 활동 내역</h1>
+          <Link href="/" className={styles.homeLink}>홈으로 돌아가기</Link>
+        </header>
+        <section>
+          <h2>내가 올린 사진 (...)</h2>
+          <PhotoCardSkeleton />
+        </section>
+        <section>
+          <h2>내가 쓴 댓글 (...)</h2>
+          {/* 댓글 스켈레톤 UI도 필요하다면 추가할 수 있습니다. */}
+          <p className={styles.message}>로딩 중...</p>
+        </section>
+      </div>
+    );
   }
 
   if (!user) {

@@ -1,0 +1,5 @@
+.header {
+  border-bottom: none; /* 스켈레톤에서는 경계선 제거 */
+  padding-bottom: 20px;
+  margin-bottom: 30px;
+}
