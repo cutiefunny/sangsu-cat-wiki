@@ -22,7 +22,6 @@ import {
   addDoc,
   doc,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -35,7 +34,7 @@ import pageStyles from "./page.module.css";
 import buttonStyles from "../components/controls.module.css";
 
 import {
-  fetchAllPhotos,
+  fetchPhotosByPage,
   uploadPhoto,
   deletePhoto,
 } from "../lib/firebase/photoService";
@@ -46,6 +45,10 @@ const Map = dynamic(() => import("../components/Map"), {
 
 export default function Home() {
   const [photos, setPhotos] = useState([]);
+  const [lastVisible, setLastVisible] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+
   const [isConfirming, setIsConfirming] = useState(false);
   const [tempMarker, setTempMarker] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -112,9 +115,22 @@ export default function Home() {
   }, []);
 
   const fetchPhotos = useCallback(async () => {
-    const photosData = await fetchAllPhotos();
-    setPhotos(photosData);
-  }, []);
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+
+    try {
+      const { photos: newPhotos, lastVisible: newLastVisible } = await fetchPhotosByPage(lastVisible);
+      setPhotos(prevPhotos => [...prevPhotos, ...newPhotos]);
+      setLastVisible(newLastVisible);
+      if (!newLastVisible) {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error("Error fetching photos:", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [lastVisible, loadingMore, hasMore]);
 
   useEffect(() => {
     fetchPhotos();
@@ -267,7 +283,10 @@ export default function Home() {
     try {
       await uploadPhoto(selectedImage, tempMarker, user);
       alert("업로드 완료!");
-      await fetchPhotos();
+      setPhotos([]);
+      setLastVisible(null);
+      setHasMore(true);
+      fetchPhotos();
     } catch (error) {
       console.error("Upload failed:", error);
       alert("업로드에 실패했습니다.");
@@ -310,7 +329,10 @@ export default function Home() {
           await deletePhoto(photoId, imageUrl);
           alert("사진이 삭제되었습니다.");
           handleCloseModal();
-          await fetchPhotos();
+          setPhotos([]);
+          setLastVisible(null);
+          setHasMore(true);
+          fetchPhotos();
         } catch (error) {
           console.error("Delete failed:", error);
           alert("삭제에 실패했습니다.");
@@ -357,7 +379,10 @@ export default function Home() {
         alert(`'${catData.name}' 도감이 생성되었습니다.`);
         setShowCreateCatProfileModal(false);
         setPhotoToCreateProfileFor(null);
-        await fetchPhotos();
+        setPhotos([]);
+        setLastVisible(null);
+        setHasMore(true);
+        fetchPhotos();
       } catch (error) {
         console.error("Error saving cat profile: ", error);
         alert("도감 생성에 실패했습니다.");
@@ -421,6 +446,18 @@ export default function Home() {
         onPhotoClick={handleGalleryPhotoClick}
       />
 
+      {hasMore && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+          <button
+            className={buttonStyles.button}
+            onClick={fetchPhotos}
+            disabled={loadingMore}
+          >
+            {loadingMore ? '불러오는 중...' : '더 보기'}
+          </button>
+        </div>
+      )}
+
       <Toast
         message="뒤로 가기를 한 번 더 누르면 앱이 종료됩니다."
         show={showExitToast}
@@ -434,7 +471,7 @@ export default function Home() {
           onDelete={handleDeletePhoto}
           onLoginRequest={handleLoginRequest}
           onCreateCatProfile={handleOpenCreateCatProfileModal}
-          user={user} 
+          user={user}
         />
       )}
 
