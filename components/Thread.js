@@ -80,7 +80,7 @@ function Thread({ cat, isAdmin, onPostCreated }) {
     try {
       // 1. 이미지가 있으면 업로드
       if (imageFile) {
-        const options = { maxSizeMB: 0.1, maxWidthOrHeight: 600, useWebWorker: true, fileType: "image/avif" };
+        const options = { maxSizeMB: 0.5, maxWidthOrHeight: 800, useWebWorker: true, fileType: "image/avif" };
         const compressedFile = await imageCompression(imageFile, options);
         
         const timestamp = formatDate(new Date());

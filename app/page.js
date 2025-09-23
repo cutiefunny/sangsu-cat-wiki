@@ -210,8 +210,8 @@ export default function Home() {
   const handleFileSelect = useCallback((imageFile) => {
     const processImage = async (file) => {
       const options = {
-        maxSizeMB: 0.1,
-        maxWidthOrHeight: 600,
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 800,
         useWebWorker: true,
         fileType: "image/avif",
         preserveExif: false,
