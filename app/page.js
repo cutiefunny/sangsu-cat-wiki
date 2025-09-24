@@ -9,7 +9,7 @@ import ProfileModal from "../components/ProfileModal";
 import PhotoGallery from "../components/PhotoGallery";
 import CreateCatProfileModal from "../components/CreateCatProfileModal";
 import Toast from "../components/Toast";
-import { db, auth, provider } from "../lib/firebase/clientApp";
+import { db, auth, provider, storage } from "../lib/firebase/clientApp";
 import {
   collection,
   query,
@@ -28,6 +28,7 @@ import {
   signOut,
   updateProfile,
 } from "firebase/auth";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import imageCompression from "browser-image-compression";
 import EXIF from "exif-js";
 import pageStyles from "./page.module.css";
