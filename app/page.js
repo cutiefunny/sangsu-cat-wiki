@@ -9,258 +9,116 @@ import ProfileModal from "../components/ProfileModal";
 import PhotoGallery from "../components/PhotoGallery";
 import CreateCatProfileModal from "../components/CreateCatProfileModal";
 import Toast from "../components/Toast";
-import { db, auth, provider, storage } from "../lib/firebase/clientApp";
-import {
-  collection,
-  query,
-  where,
-  writeBatch,
-  getDoc,
-  setDoc,
-  updateDoc,
-  getDocs,
-  addDoc,
-  doc,
-} from "firebase/firestore";
-import {
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut,
-  updateProfile,
-} from "firebase/auth";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import imageCompression from "browser-image-compression";
 import EXIF from "exif-js";
+import imageCompression from "browser-image-compression";
 import pageStyles from "./page.module.css";
 import buttonStyles from "../components/controls.module.css";
 
-import {
-  fetchPhotosByPage,
-  uploadPhoto,
-  deletePhoto,
-} from "../lib/firebase/photoService";
+// Custom Hooks import
+import { useAuth } from "../hooks/useAuth";
+import { usePhotos } from "../hooks/usePhotos";
+import { useModal } from "../hooks/useModal";
 
 const Map = dynamic(() => import("../components/Map"), {
   ssr: false,
 });
 
 export default function Home() {
-  const [photos, setPhotos] = useState([]);
-  const [lastVisible, setLastVisible] = useState(null);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const { 
+    user, 
+    isAdmin, 
+    handleGoogleLogin, 
+    handleUpdateAvatar, 
+    handleUpdateNickname 
+  } = useAuth();
+  
+  const { 
+    photos, 
+    isLoading: isPhotosLoading,
+    isUploading, 
+    refreshPhotos,
+    uploadPhoto, 
+    deletePhoto, 
+    handleSaveCatProfile,
+    photoToCreateProfileFor,
+    setPhotoToCreateProfileFor
+  } = usePhotos(user);
+
+  const {
+    isModalOpen,
+    selectedPhoto,
+    showLoginModal,
+    showProfileModal,
+    showCreateCatProfileModal,
+    openModal,
+    closeModal,
+    openLoginModal,
+    closeLoginModal,
+    openProfileModal,
+    closeProfileModal,
+    openCreateCatProfileModal,
+    closeCreateCatProfileModal,
+  } = useModal();
 
   const [isConfirming, setIsConfirming] = useState(false);
   const [tempMarker, setTempMarker] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPhoto, setSelectedPhoto] = useState(null);
-  const [user, setUser] = useState(null);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
   const [visiblePhotos, setVisiblePhotos] = useState([]);
-
-  const [showCreateCatProfileModal, setShowCreateCatProfileModal] =
-    useState(false);
-  const [photoToCreateProfileFor, setPhotoToCreateProfileFor] = useState(null);
+  const [mapCenter, setMapCenter] = useState(null);
+  
   const [showExitToast, setShowExitToast] = useState(false);
   const backPressRef = useRef(false);
-  const [mapCenter, setMapCenter] = useState(null);
-
-  const isAdmin = user && user.email === "cutiefunny@gmail.com";
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        const userDocRef = doc(db, "users", currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists()) {
-          await setDoc(userDocRef, {
-            uid: currentUser.uid,
-            displayName: currentUser.displayName,
-            email: currentUser.email,
-            photoURL: currentUser.photoURL,
-          });
-        }
-      }
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, []);
+    refreshPhotos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); 
 
+  // 뒤로가기 제어
   useEffect(() => {
     window.history.pushState(null, "", window.location.href);
-
-    const handlePopState = (event) => {
+    const handlePopState = () => {
       if (!backPressRef.current) {
         backPressRef.current = true;
         setShowExitToast(true);
-
         setTimeout(() => {
           backPressRef.current = false;
           setShowExitToast(false);
         }, 2000);
-
         window.history.pushState(null, "", window.location.href);
       } else {
         window.history.back();
       }
     };
-
     window.addEventListener("popstate", handlePopState);
-
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-    };
-  }, []);
-
-  const fetchPhotos = useCallback(async () => {
-    if (loadingMore || !hasMore) return;
-    setLoadingMore(true);
-
-    try {
-      const { photos: newPhotos, lastVisible: newLastVisible } = await fetchPhotosByPage(lastVisible);
-      setPhotos(prevPhotos => [...prevPhotos, ...newPhotos]);
-      setLastVisible(newLastVisible);
-      if (!newLastVisible) {
-        setHasMore(false);
-      }
-    } catch (error) {
-      console.error("Error fetching photos:", error);
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [lastVisible, loadingMore, hasMore]);
-
-  useEffect(() => {
-    fetchPhotos();
-  }, [fetchPhotos]);
-
-  const handleGoogleLogin = useCallback(async () => {
-    try {
-      await signInWithPopup(auth, provider);
-      setShowLoginModal(false);
-    } catch (error) {
-      console.error("Login failed:", error);
-    }
-  }, []);
-
-  const updateUserRecords = async (uid, updateData) => {
-    const batch = writeBatch(db);
-    const photosQuery = query(
-      collection(db, "photos"),
-      where("userId", "==", uid)
-    );
-    const photosSnapshot = await getDocs(photosQuery);
-    photosSnapshot.forEach((doc) => batch.update(doc.ref, updateData));
-    const commentsQuery = query(
-      collection(db, "comments"),
-      where("userId", "==", uid)
-    );
-    const commentsSnapshot = await getDocs(commentsQuery);
-    commentsSnapshot.forEach((doc) => batch.update(doc.ref, updateData));
-    await batch.commit();
-  };
-
-  const handleUpdateAvatar = async (file) => {
-    if (!user || !file) return;
-    try {
-      const storageRef = ref(storage, `avatars/${user.uid}/${file.name}`);
-      const compressedFile = await imageCompression(file, {
-        maxSizeMB: 0.2,
-        maxWidthOrHeight: 200,
-      });
-      await uploadBytes(storageRef, compressedFile);
-      const newPhotoURL = await getDownloadURL(storageRef);
-
-      await updateProfile(auth.currentUser, { photoURL: newPhotoURL });
-      await updateUserRecords(user.uid, { userPhotoURL: newPhotoURL });
-
-      const userDocRef = doc(db, "users", user.uid);
-      await setDoc(userDocRef, { photoURL: newPhotoURL }, { merge: true });
-
-      setUser({ ...auth.currentUser });
-      alert("아바타가 변경되었습니다.");
-    } catch (error) {
-      console.error("Avatar update failed:", error);
-      alert("아바타 변경에 실패했습니다.");
-    }
-  };
-
-  const handleUpdateNickname = async (newNickname) => {
-    if (!user || !newNickname || user.displayName === newNickname) return false;
-    try {
-      const usersQuery = query(
-        collection(db, "users"),
-        where("displayName", "==", newNickname)
-      );
-      const querySnapshot = await getDocs(usersQuery);
-      if (!querySnapshot.empty) {
-        alert("이미 사용 중인 닉네임입니다.");
-        return false;
-      }
-      await updateProfile(auth.currentUser, { displayName: newNickname });
-      await updateUserRecords(user.uid, { userName: newNickname });
-
-      const userDocRef = doc(db, "users", user.uid);
-      await setDoc(userDocRef, { displayName: newNickname }, { merge: true });
-
-      setUser({ ...auth.currentUser });
-      alert("닉네임이 변경되었습니다.");
-      return true;
-    } catch (error) {
-      console.error("Nickname update failed:", error);
-      alert("닉네임 변경에 실패했습니다.");
-      return false;
-    }
-  };
-
-  const handleSignOut = useCallback(async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Sign out failed:", error);
-    }
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   const handleFileSelect = useCallback((imageFile) => {
     const processImage = async (file) => {
-      const options = {
-        maxSizeMB: 0.5,
-        maxWidthOrHeight: 800,
-        useWebWorker: true,
-        fileType: "image/avif",
-        preserveExif: false,
-      };
       try {
         EXIF.getData(file, async function () {
           let position;
           const lat = EXIF.getTag(this, "GPSLatitude");
           const lng = EXIF.getTag(this, "GPSLongitude");
+
           if (lat && lng) {
             const latRef = EXIF.getTag(this, "GPSLatitudeRef");
             const lngRef = EXIF.getTag(this, "GPSLongitudeRef");
             position = {
-              lat:
-                (lat[0] + lat[1] / 60 + lat[2] / 3600) *
-                (latRef === "N" ? 1 : -1),
-              lng:
-                (lng[0] + lng[1] / 60 + lng[2] / 3600) *
-                (lngRef === "E" ? 1 : -1),
+              lat: (lat[0] + lat[1] / 60 + lat[2] / 3600) * (latRef === "N" ? 1 : -1),
+              lng: (lng[0] + lng[1] / 60 + lng[2] / 3600) * (lngRef === "E" ? 1 : -1),
             };
           } else {
             position = await new Promise((resolve, reject) => {
               navigator.geolocation.getCurrentPosition(
-                (pos) =>
-                  resolve({
-                    lat: pos.coords.latitude,
-                    lng: pos.coords.longitude,
-                  }),
+                (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
                 (err) => reject(err)
               );
             });
           }
+          
+          const options = { maxSizeMB: 0.5, maxWidthOrHeight: 800, useWebWorker: true, fileType: "image/avif" };
           const compressedFile = await imageCompression(file, options);
           setSelectedImage(compressedFile);
           setTempMarker(position);
@@ -274,126 +132,34 @@ export default function Home() {
     processImage(imageFile);
   }, []);
 
-  const handleTempMarkerChange = useCallback((position) => {
-    setTempMarker(position);
-  }, []);
-
   const handleConfirmUpload = useCallback(async () => {
-    if (!selectedImage || !tempMarker || !user) return;
-    setIsUploading(true);
-    try {
-      await uploadPhoto(selectedImage, tempMarker, user);
-      alert("업로드 완료!");
-      setPhotos([]);
-      setLastVisible(null);
-      setHasMore(true);
-      fetchPhotos();
-    } catch (error) {
-      console.error("Upload failed:", error);
-      alert("업로드에 실패했습니다.");
-    } finally {
-      setIsUploading(false);
-      setIsConfirming(false);
-      setTempMarker(null);
-      setSelectedImage(null);
+    await uploadPhoto(selectedImage, tempMarker);
+    setIsConfirming(false);
+    setTempMarker(null);
+    setSelectedImage(null);
+  }, [selectedImage, tempMarker, uploadPhoto]);
+  
+  const handleDelete = async (photoId, imageUrl) => {
+    if (await deletePhoto(photoId, imageUrl)) {
+      closeModal();
     }
-  }, [selectedImage, tempMarker, user, fetchPhotos]);
-
-  const handleMarkerClick = useCallback((photo) => {
-    setSelectedPhoto(photo);
-    setIsModalOpen(true);
-  }, []);
-
-  const handleCloseModal = useCallback(() => {
-    setIsModalOpen(false);
-    setSelectedPhoto(null);
-  }, []);
-
-  const handleBoundsChange = useCallback((newVisiblePhotos) => {
-    setVisiblePhotos(newVisiblePhotos);
-  }, []);
-
-  const handleGalleryPhotoClick = (photo) => {
-    setMapCenter({ lat: photo.lat, lng: photo.lng });
-    setSelectedPhoto(photo);
-    setIsModalOpen(true);
   };
-
-  const handleDeletePhoto = useCallback(
-    async (photoId, imageUrl) => {
-      if (!isAdmin) {
-        alert("삭제 권한이 없습니다.");
-        return;
-      }
-      if (confirm("정말로 이 사진을 삭제하시겠습니까?")) {
-        try {
-          await deletePhoto(photoId, imageUrl);
-          alert("사진이 삭제되었습니다.");
-          handleCloseModal();
-          setPhotos([]);
-          setLastVisible(null);
-          setHasMore(true);
-          fetchPhotos();
-        } catch (error) {
-          console.error("Delete failed:", error);
-          alert("삭제에 실패했습니다.");
-        }
-      }
-    },
-    [isAdmin, fetchPhotos, handleCloseModal]
-  );
-
-  const handleLoginRequest = () => {
-    setShowLoginModal(true);
-  };
-
-  const handleOpenCreateCatProfileModal = useCallback((photo) => {
+  
+  const handleOpenCreateModal = (photo) => {
     setPhotoToCreateProfileFor(photo);
-    setShowCreateCatProfileModal(true);
-    setIsModalOpen(false);
-  }, []);
+    openCreateCatProfileModal();
+  };
 
-  const handleSaveCatProfile = useCallback(
-    async (catData) => {
-      if (!user) {
-        alert("로그인이 필요합니다.");
-        return;
-      }
-      if (!photoToCreateProfileFor) {
-        alert("오류: 대상 사진 정보가 없습니다.");
-        return;
-      }
-
-      try {
-        const newCatRef = await addDoc(collection(db, "cats"), {
-          ...catData,
-          createdAt: new Date(),
-          createdBy: user.uid,
-        });
-
-        const photoDocRef = doc(db, "photos", photoToCreateProfileFor.id);
-        await updateDoc(photoDocRef, {
-          catId: newCatRef.id,
-          catName: catData.name,
-        });
-
-        alert(`'${catData.name}' 도감이 생성되었습니다.`);
-        setShowCreateCatProfileModal(false);
-        setPhotoToCreateProfileFor(null);
-        setPhotos([]);
-        setLastVisible(null);
-        setHasMore(true);
-        fetchPhotos();
-      } catch (error) {
-        console.error("Error saving cat profile: ", error);
-        alert("도감 생성에 실패했습니다.");
-      }
-    },
-    [user, photoToCreateProfileFor, fetchPhotos]
-  );
+  const handleSaveProfile = async (catData) => {
+    const success = await handleSaveCatProfile(catData);
+    if(success) {
+      closeCreateCatProfileModal();
+      setPhotoToCreateProfileFor(null);
+    }
+  }
 
   return (
-    <div>
+    <div className={pageStyles.container}>
       <header className={pageStyles.header}>
         <img src="/images/icon.png" alt="로고" height={40} />
         <div className={pageStyles.userInfo}>
@@ -401,25 +167,26 @@ export default function Home() {
             handleFileSelect={handleFileSelect}
             isConfirming={isConfirming}
             user={user}
-            onLoginRequest={handleLoginRequest}
+            onLoginRequest={openLoginModal}
           />
           {user ? (
             <img
               src={user.photoURL}
               alt="사용자 프로필"
               className={pageStyles.profileImage}
-              onClick={() => setShowProfileModal(true)}
+              onClick={openProfileModal}
               style={{ cursor: "pointer" }}
             />
           ) : (
             <div
               className={pageStyles.anonymousAvatar}
-              onClick={() => setShowLoginModal(true)}
+              onClick={openLoginModal}
               title="로그인"
             />
           )}
         </div>
       </header>
+
       {isConfirming && (
         <div className={pageStyles.confirmSection}>
           <p>지도를 움직여 정확한 위치에 핀을 놓아주세요.</p>
@@ -432,67 +199,66 @@ export default function Home() {
           </button>
         </div>
       )}
-      <Map
-        photos={photos}
-        tempMarker={tempMarker}
-        onTempMarkerChange={handleTempMarkerChange}
-        isConfirming={isConfirming}
-        onMarkerClick={handleMarkerClick}
-        onBoundsChange={handleBoundsChange}
-        center={mapCenter}
-        selectedPhoto={selectedPhoto}
-      />
-      <PhotoGallery
-        photos={visiblePhotos}
-        onPhotoClick={handleGalleryPhotoClick}
-      />
-
-      {hasMore && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
-          <button
-            className={buttonStyles.button}
-            onClick={fetchPhotos}
-            disabled={loadingMore}
-          >
-            {loadingMore ? '불러오는 중...' : '더 보기'}
-          </button>
+      
+      {isPhotosLoading ? (
+        <div style={{ width: "100%", height: "400px", backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          지도와 사진을 불러오는 중...
         </div>
+      ) : (
+        <Map
+          photos={photos}
+          tempMarker={tempMarker}
+          onTempMarkerChange={setTempMarker}
+          isConfirming={isConfirming}
+          onMarkerClick={openModal}
+          onBoundsChange={setVisiblePhotos}
+          center={mapCenter}
+          selectedPhoto={selectedPhoto}
+        />
       )}
 
-      <Toast
-        message="뒤로 가기를 한 번 더 누르면 앱이 종료됩니다."
-        show={showExitToast}
+      <PhotoGallery
+        photos={visiblePhotos}
+        onPhotoClick={(photo) => {
+          setMapCenter({ lat: photo.lat, lng: photo.lng });
+          openModal(photo);
+        }}
       />
+
+      <Toast message="뒤로 가기를 한 번 더 누르면 앱이 종료됩니다." show={showExitToast} />
 
       {isModalOpen && (
         <Modal
           photo={selectedPhoto}
-          onClose={handleCloseModal}
+          onClose={closeModal}
           isAdmin={isAdmin}
-          onDelete={handleDeletePhoto}
-          onLoginRequest={handleLoginRequest}
-          onCreateCatProfile={handleOpenCreateCatProfileModal}
+          onDelete={handleDelete}
+          onLoginRequest={openLoginModal}
+          onCreateCatProfile={handleOpenCreateModal}
           user={user}
         />
       )}
 
       {showCreateCatProfileModal && (
         <CreateCatProfileModal
-          onClose={() => setShowCreateCatProfileModal(false)}
-          onSave={handleSaveCatProfile}
+          onClose={closeCreateCatProfileModal}
+          onSave={handleSaveProfile}
+        />
+      )}
+      
+      {showLoginModal && (
+        <LoginModal
+          onLogin={() => {
+            handleGoogleLogin().then(() => closeLoginModal());
+          }}
+          onClose={closeLoginModal}
         />
       )}
 
-      {showLoginModal && (
-        <LoginModal
-          onLogin={handleGoogleLogin}
-          onClose={() => setShowLoginModal(false)}
-        />
-      )}
       {showProfileModal && (
         <ProfileModal
           user={user}
-          onClose={() => setShowProfileModal(false)}
+          onClose={closeProfileModal}
           onUpdateAvatar={handleUpdateAvatar}
           onUpdateNickname={handleUpdateNickname}
         />

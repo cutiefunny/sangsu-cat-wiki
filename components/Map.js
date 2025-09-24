@@ -11,47 +11,48 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
   const mapInstance = useRef(null);
   const draggableMarkerRef = useRef(null);
   const existingMarkersRef = useRef([]);
-  const [currentZoom, setCurrentZoom] = useState(15);
+  const [currentZoom, setCurrentZoom] = useState(13); // 초기 줌 레벨 상태도 13으로 변경
+  const [isMapInitialized, setIsMapInitialized] = useState(false);
 
+  // 1. 지도 초기화 useEffect
   useEffect(() => {
     const { naver } = window;
-    if (!mapElement.current || !naver) return;
+    if (!mapElement.current || !naver || isMapInitialized) return;
 
-    // 지도 초기화 함수
     const initializeMap = (centerLatLng) => {
       const mapOptions = {
         center: centerLatLng,
-        zoom: 15,
+        zoom: 13, // ### 초기 줌 레벨을 15에서 13으로 수정 ###
         zoomControl: true,
       };
       const map = new naver.maps.Map(mapElement.current, mapOptions);
       mapInstance.current = map;
-      setCurrentZoom(map.getZoom());
-      naver.maps.Event.addListener(map, 'zoom_changed', () => setCurrentZoom(map.getZoom()));
+      
+      naver.maps.Event.addListener(map, 'zoom_changed', () => {
+        setCurrentZoom(map.getZoom());
+      });
+      
+      setIsMapInitialized(true);
     };
 
-    // 기본 위치 (서울 상수동 부근)
     const defaultLocation = new naver.maps.LatLng(37.548, 126.923);
 
-    // Geolocation API를 사용하여 현재 위치 가져오기
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          // 성공 시: 현재 위치를 지도의 중심으로 설정
           const currentLocation = new naver.maps.LatLng(position.coords.latitude, position.coords.longitude);
           initializeMap(currentLocation);
         },
         () => {
-          // 실패 시: 기본 위치로 설정
           initializeMap(defaultLocation);
         }
       );
     } else {
-      // Geolocation API를 지원하지 않는 경우 기본 위치로 설정
       initializeMap(defaultLocation);
     }
-  }, []);
+  }, [isMapInitialized]);
 
+  // 2. 지도 중심 이동 useEffect
   useEffect(() => {
     if (mapInstance.current && center) {
       const { naver } = window;
@@ -59,11 +60,28 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
     }
   }, [center]);
 
+  // 3. 마커 생성 및 이벤트 리스너 통합 useEffect
   useEffect(() => {
-    if (!mapInstance.current) return;
+    if (!isMapInitialized || !mapInstance.current) return;
     const { naver } = window;
-    
+
+    // 기존 마커 정리
+    existingMarkersRef.current.forEach(({ marker }) => marker.setMap(null));
+    existingMarkersRef.current = [];
+
+    // 새 마커 생성
+    photos.forEach((photo) => {
+      const marker = new naver.maps.Marker({
+        position: new naver.maps.LatLng(photo.lat, photo.lng),
+        map: mapInstance.current,
+      });
+      naver.maps.Event.addListener(marker, "click", () => onMarkerClick(photo));
+      existingMarkersRef.current.push({ id: photo.id, photo: photo, marker: marker });
+    });
+
+    // 지도 영역 변경 시 갤러리 업데이트 함수
     const updateVisiblePhotos = () => {
+      if (!mapInstance.current) return;
       const bounds = mapInstance.current.getBounds();
       const visible = photos.filter(photo =>
         bounds.hasLatLng(new naver.maps.LatLng(photo.lat, photo.lng))
@@ -71,44 +89,27 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
       onBoundsChange(visible);
     };
 
-    const listener = naver.maps.Event.addListener(mapInstance.current, 'idle', updateVisiblePhotos);
+    // 'idle' 이벤트 리스너 등록
+    const idleListener = naver.maps.Event.addListener(mapInstance.current, 'idle', updateVisiblePhotos);
+    
+    // 초기 로딩 시 한 번 실행
     updateVisiblePhotos();
 
+    // Clean-up 함수: 컴포넌트 언마운트 또는 재실행 시 리스너 제거
     return () => {
-      naver.maps.Event.removeListener(listener);
+      naver.maps.Event.removeListener(idleListener);
     };
-  }, [photos, onBoundsChange]);
+  }, [isMapInitialized, photos, onMarkerClick, onBoundsChange]);
 
-  useEffect(() => {
-    if (!mapInstance.current) return;
-    const { naver } = window;
-    const photoIds = new Set(photos.map(p => p.id));
-    existingMarkersRef.current = existingMarkersRef.current.filter(({ id, marker }) => {
-      if (!photoIds.has(id)) {
-        marker.setMap(null);
-        return false;
-      }
-      return true;
-    });
-    const existingMarkerIds = new Set(existingMarkersRef.current.map(m => m.id));
-    photos.forEach((photo) => {
-      if (!existingMarkerIds.has(photo.id)) {
-        const marker = new naver.maps.Marker({
-          position: new naver.maps.LatLng(photo.lat, photo.lng),
-          map: mapInstance.current,
-        });
-        naver.maps.Event.addListener(marker, "click", () => onMarkerClick(photo));
-        existingMarkersRef.current.push({ id: photo.id, photo: photo, marker: marker });
-      }
-    });
-  }, [photos, onMarkerClick]);
 
+  // 4. 마커 스타일 업데이트 useEffect
   useEffect(() => {
     if (!mapInstance.current) return;
     const { naver } = window;
 
     existingMarkersRef.current.forEach(({ photo, marker }) => {
       const isSelected = selectedPhoto && selectedPhoto.id === photo.id;
+      const zIndex = isSelected ? 100 : 1;
 
       if (currentZoom >= MAX_ZOOM_LEVEL_FOR_PHOTO) {
         const style = isSelected ? HIGHLIGHTED_ICON_STYLE : REGULAR_ICON_STYLE;
@@ -118,14 +119,15 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
           content: `<div style="${style.replace('{imageUrl}', photo.imageUrl)}"></div>`,
           anchor: anchor,
         });
-        marker.setZIndex(isSelected ? 100 : 1);
+        marker.setZIndex(zIndex);
       } else {
-        marker.setIcon(null);
-        marker.setZIndex(isSelected ? 100 : 1);
+        marker.setIcon(null); // 줌 레벨이 낮아지면 기본 마커로 변경
+        marker.setZIndex(zIndex);
       }
     });
-  }, [currentZoom, photos, selectedPhoto]);
+  }, [currentZoom, selectedPhoto]);
 
+  // 5. 업로드 확인용 임시 마커 useEffect
   useEffect(() => {
     const { naver } = window;
     if (!mapInstance.current || !naver) return;
