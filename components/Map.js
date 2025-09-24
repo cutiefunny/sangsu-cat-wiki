@@ -6,15 +6,14 @@ const MAX_ZOOM_LEVEL_FOR_PHOTO = 18;
 const REGULAR_ICON_STYLE = 'width: 60px; height: 60px; border-radius: 50%; background-image: url({imageUrl}); background-size: cover; background-position: center center; border: 3px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.5);';
 const HIGHLIGHTED_ICON_STYLE = 'width: 70px; height: 70px; border-radius: 50%; background-image: url({imageUrl}); background-size: cover; background-position: center center; border: 4px solid #007bff; box-shadow: 0 0 12px rgba(0,123,255,0.8);';
 
-function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerClick, onBoundsChange, center, selectedPhoto }) {
+function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerClick, onBoundsChange, center, zoom, selectedPhoto }) {
   const mapElement = useRef(null);
   const mapInstance = useRef(null);
   const draggableMarkerRef = useRef(null);
   const existingMarkersRef = useRef([]);
-  const [currentZoom, setCurrentZoom] = useState(13); // 초기 줌 레벨 상태도 13으로 변경
+  const [currentZoom, setCurrentZoom] = useState(zoom || 13);
   const [isMapInitialized, setIsMapInitialized] = useState(false);
 
-  // 1. 지도 초기화 useEffect
   useEffect(() => {
     const { naver } = window;
     if (!mapElement.current || !naver || isMapInitialized) return;
@@ -22,7 +21,7 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
     const initializeMap = (centerLatLng) => {
       const mapOptions = {
         center: centerLatLng,
-        zoom: 13, // ### 초기 줌 레벨을 15에서 13으로 수정 ###
+        zoom: zoom || 13, // 초기 줌 레벨 설정
         zoomControl: true,
       };
       const map = new naver.maps.Map(mapElement.current, mapOptions);
@@ -50,26 +49,26 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
     } else {
       initializeMap(defaultLocation);
     }
-  }, [isMapInitialized]);
+  }, [isMapInitialized, zoom]);
 
-  // 2. 지도 중심 이동 useEffect
+  // ### 지도 중심 및 줌 레벨 이동 로직 수정 ###
   useEffect(() => {
     if (mapInstance.current && center) {
       const { naver } = window;
-      mapInstance.current.panTo(new naver.maps.LatLng(center.lat, center.lng));
+      const newCenter = new naver.maps.LatLng(center.lat, center.lng);
+      
+      // morph 메서드를 사용하여 위치와 줌 레벨을 부드럽게 변경
+      mapInstance.current.morph(newCenter, zoom);
     }
-  }, [center]);
+  }, [center, zoom]);
 
-  // 3. 마커 생성 및 이벤트 리스너 통합 useEffect
   useEffect(() => {
     if (!isMapInitialized || !mapInstance.current) return;
     const { naver } = window;
 
-    // 기존 마커 정리
     existingMarkersRef.current.forEach(({ marker }) => marker.setMap(null));
     existingMarkersRef.current = [];
 
-    // 새 마커 생성
     photos.forEach((photo) => {
       const marker = new naver.maps.Marker({
         position: new naver.maps.LatLng(photo.lat, photo.lng),
@@ -79,7 +78,6 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
       existingMarkersRef.current.push({ id: photo.id, photo: photo, marker: marker });
     });
 
-    // 지도 영역 변경 시 갤러리 업데이트 함수
     const updateVisiblePhotos = () => {
       if (!mapInstance.current) return;
       const bounds = mapInstance.current.getBounds();
@@ -89,20 +87,15 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
       onBoundsChange(visible);
     };
 
-    // 'idle' 이벤트 리스너 등록
     const idleListener = naver.maps.Event.addListener(mapInstance.current, 'idle', updateVisiblePhotos);
-    
-    // 초기 로딩 시 한 번 실행
     updateVisiblePhotos();
 
-    // Clean-up 함수: 컴포넌트 언마운트 또는 재실행 시 리스너 제거
     return () => {
       naver.maps.Event.removeListener(idleListener);
     };
   }, [isMapInitialized, photos, onMarkerClick, onBoundsChange]);
 
 
-  // 4. 마커 스타일 업데이트 useEffect
   useEffect(() => {
     if (!mapInstance.current) return;
     const { naver } = window;
@@ -121,13 +114,12 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
         });
         marker.setZIndex(zIndex);
       } else {
-        marker.setIcon(null); // 줌 레벨이 낮아지면 기본 마커로 변경
+        marker.setIcon(null);
         marker.setZIndex(zIndex);
       }
     });
   }, [currentZoom, selectedPhoto]);
 
-  // 5. 업로드 확인용 임시 마커 useEffect
   useEffect(() => {
     const { naver } = window;
     if (!mapInstance.current || !naver) return;

@@ -66,11 +66,16 @@ export const usePhotos = (user) => {
       return false;
     }
     try {
+      // ### 도감 생성 시 위치, 대표이미지 정보 추가 ###
       const newCatRef = await addDoc(collection(db, "cats"), {
         ...catData,
         createdAt: new Date(),
         createdBy: user.uid,
+        lat: photoToCreateProfileFor.lat,
+        lng: photoToCreateProfileFor.lng,
+        mainPhotoUrl: photoToCreateProfileFor.imageUrl,
       });
+
       const photoDocRef = doc(db, "photos", photoToCreateProfileFor.id);
       await updateDoc(photoDocRef, {
         catId: newCatRef.id,

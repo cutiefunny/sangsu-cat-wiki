@@ -9,15 +9,16 @@ import ProfileModal from "../components/ProfileModal";
 import PhotoGallery from "../components/PhotoGallery";
 import CreateCatProfileModal from "../components/CreateCatProfileModal";
 import Toast from "../components/Toast";
+import RecentPhotos from "../components/RecentPhotos";
 import EXIF from "exif-js";
 import imageCompression from "browser-image-compression";
 import pageStyles from "./page.module.css";
 import buttonStyles from "../components/controls.module.css";
 
-// Custom Hooks import
 import { useAuth } from "../hooks/useAuth";
 import { usePhotos } from "../hooks/usePhotos";
 import { useModal } from "../hooks/useModal";
+import { fetchRecentPhotos } from "../lib/firebase/photoService";
 
 const Map = dynamic(() => import("../components/Map"), {
   ssr: false,
@@ -64,17 +65,29 @@ export default function Home() {
   const [tempMarker, setTempMarker] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [visiblePhotos, setVisiblePhotos] = useState([]);
-  const [mapCenter, setMapCenter] = useState(null);
+  
+  // ### 지도 상태를 center와 zoom으로 통합 관리 ###
+  const [mapViewState, setMapViewState] = useState({ center: null, zoom: 13 });
+  
+  const [recentPhotos, setRecentPhotos] = useState([]);
+  const [isLoadingRecentPhotos, setIsLoadingRecentPhotos] = useState(true);
   
   const [showExitToast, setShowExitToast] = useState(false);
   const backPressRef = useRef(false);
+  const mapRef = useRef(null);
 
   useEffect(() => {
     refreshPhotos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+    const loadRecentPhotos = async () => {
+      setIsLoadingRecentPhotos(true);
+      const photos = await fetchRecentPhotos();
+      setRecentPhotos(photos);
+      setIsLoadingRecentPhotos(false);
+    };
+    loadRecentPhotos();
+  }, [refreshPhotos]); 
 
-  // 뒤로가기 제어
+  // ... (다른 useEffect 및 핸들러 함수는 변경 없음) ...
   useEffect(() => {
     window.history.pushState(null, "", window.location.href);
     const handlePopState = () => {
@@ -158,6 +171,22 @@ export default function Home() {
     }
   }
 
+  // ### 최근 사진 카드 클릭 핸들러 함수 수정 ###
+  const handleRecentPhotoClick = (photo) => {
+    mapRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // 지도 중심과 zoom 레벨을 함께 업데이트
+    setMapViewState({ center: { lat: photo.lat, lng: photo.lng }, zoom: 17 });
+    openModal(photo);
+  };
+  
+  // ### 갤러리 사진 클릭 핸들러 함수 수정 ###
+  const handleGalleryPhotoClick = (photo) => {
+    // 줌 레벨은 유지한 채로 지도 중심만 이동
+    setMapViewState(prevState => ({ ...prevState, center: { lat: photo.lat, lng: photo.lng } }));
+    openModal(photo);
+  };
+
+
   return (
     <div className={pageStyles.container}>
       <header className={pageStyles.header}>
@@ -200,29 +229,35 @@ export default function Home() {
         </div>
       )}
       
-      {isPhotosLoading ? (
-        <div style={{ width: "100%", height: "400px", backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          지도와 사진을 불러오는 중...
-        </div>
-      ) : (
-        <Map
-          photos={photos}
-          tempMarker={tempMarker}
-          onTempMarkerChange={setTempMarker}
-          isConfirming={isConfirming}
-          onMarkerClick={openModal}
-          onBoundsChange={setVisiblePhotos}
-          center={mapCenter}
-          selectedPhoto={selectedPhoto}
-        />
-      )}
+      <div ref={mapRef}>
+        {isPhotosLoading ? (
+          <div style={{ width: "100%", height: "400px", backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            지도와 사진을 불러오는 중...
+          </div>
+        ) : (
+          <Map
+            photos={photos}
+            tempMarker={tempMarker}
+            onTempMarkerChange={setTempMarker}
+            isConfirming={isConfirming}
+            onMarkerClick={openModal}
+            onBoundsChange={setVisiblePhotos}
+            center={mapViewState.center}
+            zoom={mapViewState.zoom} // zoom prop 전달
+            selectedPhoto={selectedPhoto}
+          />
+        )}
+      </div>
 
       <PhotoGallery
         photos={visiblePhotos}
-        onPhotoClick={(photo) => {
-          setMapCenter({ lat: photo.lat, lng: photo.lng });
-          openModal(photo);
-        }}
+        onPhotoClick={handleGalleryPhotoClick} // 수정된 핸들러 연결
+      />
+
+      <RecentPhotos 
+        photos={recentPhotos} 
+        isLoading={isLoadingRecentPhotos} 
+        onPhotoClick={handleRecentPhotoClick}
       />
 
       <Toast message="뒤로 가기를 한 번 더 누르면 앱이 종료됩니다." show={showExitToast} />

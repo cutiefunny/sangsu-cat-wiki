@@ -1,0 +1,63 @@
+.card {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  background-color: #fff;
+  cursor: pointer; /* 클릭 가능한 커서 모양으로 변경 */
+  transition: transform 0.2s ease, box-shadow 0.2s ease; /* 부드러운 효과를 위한 transition 추가 */
+}
+
+/* 마우스를 올렸을 때 약간 확대되는 효과 추가 */
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.cardContent {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  gap: 15px;
+}
+
+.photo {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  display: block;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.info {
+  flex-grow: 1;
+  padding: 0;
+  background-color: transparent;
+  min-width: 0; /* flex item의 너비가 줄어들 수 있도록 설정 */
+}
+
+.catName {
+  font-size: 15px;
+  font-weight: bold;
+  color: #007bff;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dateTime {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.location {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

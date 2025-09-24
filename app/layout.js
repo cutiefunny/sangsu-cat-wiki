@@ -41,9 +41,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
+        {/* ### &submodules=geocoder 추가 ### */}
         <Script
           strategy="beforeInteractive"
-          src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID}`}
+          src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID}&submodules=geocoder`}
         />
         {children}
       </body>

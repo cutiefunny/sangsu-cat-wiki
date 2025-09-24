@@ -1,0 +1,23 @@
+.section {
+  padding: 20px;
+  border-top: 1px solid #eee;
+}
+
+.title {
+  font-size: 1.5em;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.loadingText,
+.noCatsMessage {
+  color: #888;
+  text-align: center;
+  padding: 40px 0;
+}
