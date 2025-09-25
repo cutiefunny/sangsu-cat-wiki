@@ -182,8 +182,8 @@ export default function CatProfile({ params }) {
 
       await addDoc(collection(db, "photos"), {
         imageUrl: url,
-        lat: photos.length > 0 ? photos[0].lat : 0,
-        lng: photos.length > 0 ? photos[0].lng : 0,
+        lat: cat.lat || 0,
+        lng: cat.lng || 0,
         createdAt: serverTimestamp(),
         userId: user.uid,
         userName: user.displayName,
