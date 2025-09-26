@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image"; // next/image 사용
 import ImageUpload from "../components/ImageUpload";
 import Modal from "../components/Modal";
 import LoginModal from "../components/LoginModal";
@@ -16,9 +17,9 @@ import pageStyles from "./page.module.css";
 import buttonStyles from "../components/controls.module.css";
 
 import { useAuth } from "../hooks/useAuth";
-import { usePhotos } from "../hooks/usePhotos";
 import { useModal } from "../hooks/useModal";
-import { fetchRecentPhotos } from "../lib/firebase/photoService";
+// 1. usePhotos 훅 대신 Zustand 스토어를 import 합니다.
+import { usePhotoStore } from "../store/photoStore"; 
 
 const Map = dynamic(() => import("../components/Map"), {
   ssr: false,
@@ -33,17 +34,21 @@ export default function Home() {
     handleUpdateNickname 
   } = useAuth();
   
-  const { 
-    photos, 
+  // 2. usePhotos 훅과 관련 useState를 Zustand 스토어로 대체합니다.
+  const {
+    photos,
+    recentPhotos,
     isLoading: isPhotosLoading,
-    isUploading, 
-    refreshPhotos,
-    uploadPhoto, 
-    deletePhoto, 
-    handleSaveCatProfile,
+    isLoadingRecent: isLoadingRecentPhotos,
+    isUploading,
     photoToCreateProfileFor,
-    setPhotoToCreateProfileFor
-  } = usePhotos(user);
+    setPhotoToCreateProfileFor,
+    fetchPhotos,
+    fetchRecent,
+    uploadPhoto,
+    deletePhoto,
+    handleSaveCatProfile,
+  } = usePhotoStore();
 
   const {
     isModalOpen,
@@ -66,28 +71,18 @@ export default function Home() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [visiblePhotos, setVisiblePhotos] = useState([]);
   
-  // ### 지도 상태를 center와 zoom으로 통합 관리 ###
   const [mapViewState, setMapViewState] = useState({ center: null, zoom: 13 });
-  
-  const [recentPhotos, setRecentPhotos] = useState([]);
-  const [isLoadingRecentPhotos, setIsLoadingRecentPhotos] = useState(true);
   
   const [showExitToast, setShowExitToast] = useState(false);
   const backPressRef = useRef(false);
   const mapRef = useRef(null);
 
+  // 3. 앱 로드 시 Zustand 스토어의 fetch 함수들을 호출합니다.
   useEffect(() => {
-    refreshPhotos();
-    const loadRecentPhotos = async () => {
-      setIsLoadingRecentPhotos(true);
-      const photos = await fetchRecentPhotos();
-      setRecentPhotos(photos);
-      setIsLoadingRecentPhotos(false);
-    };
-    loadRecentPhotos();
-  }, [refreshPhotos]); 
+    fetchPhotos();
+    fetchRecent();
+  }, [fetchPhotos, fetchRecent]); 
 
-  // ... (다른 useEffect 및 핸들러 함수는 변경 없음) ...
   useEffect(() => {
     window.history.pushState(null, "", window.location.href);
     const handlePopState = () => {
@@ -145,12 +140,13 @@ export default function Home() {
     processImage(imageFile);
   }, []);
 
+  // 4. 핸들러 함수들이 Zustand 스토어의 함수를 사용하도록 수정합니다.
   const handleConfirmUpload = useCallback(async () => {
-    await uploadPhoto(selectedImage, tempMarker);
+    await uploadPhoto(selectedImage, tempMarker, user); // user 정보를 넘겨줍니다.
     setIsConfirming(false);
     setTempMarker(null);
     setSelectedImage(null);
-  }, [selectedImage, tempMarker, uploadPhoto]);
+  }, [selectedImage, tempMarker, uploadPhoto, user]);
   
   const handleDelete = async (photoId, imageUrl) => {
     if (await deletePhoto(photoId, imageUrl)) {
@@ -164,33 +160,28 @@ export default function Home() {
   };
 
   const handleSaveProfile = async (catData) => {
-    const success = await handleSaveCatProfile(catData);
+    const success = await handleSaveCatProfile(catData, user); // user 정보를 넘겨줍니다.
     if(success) {
       closeCreateCatProfileModal();
       setPhotoToCreateProfileFor(null);
     }
   }
 
-  // ### 최근 사진 카드 클릭 핸들러 함수 수정 ###
   const handleRecentPhotoClick = (photo) => {
     mapRef.current?.scrollIntoView({ behavior: 'smooth' });
-    // 지도 중심과 zoom 레벨을 함께 업데이트
     setMapViewState({ center: { lat: photo.lat, lng: photo.lng }, zoom: 17 });
     openModal(photo);
   };
   
-  // ### 갤러리 사진 클릭 핸들러 함수 수정 ###
   const handleGalleryPhotoClick = (photo) => {
-    // 줌 레벨은 유지한 채로 지도 중심만 이동
     setMapViewState(prevState => ({ ...prevState, center: { lat: photo.lat, lng: photo.lng } }));
     openModal(photo);
   };
 
-
   return (
     <div className={pageStyles.container}>
       <header className={pageStyles.header}>
-        <img src="/images/icon.png" alt="로고" height={40} />
+        <Image src="/images/icon.png" alt="로고" width={40} height={40} />
         <div className={pageStyles.userInfo}>
           <ImageUpload
             handleFileSelect={handleFileSelect}
@@ -199,12 +190,14 @@ export default function Home() {
             onLoginRequest={openLoginModal}
           />
           {user ? (
-            <img
+            <Image
               src={user.photoURL}
               alt="사용자 프로필"
               className={pageStyles.profileImage}
               onClick={openProfileModal}
-              style={{ cursor: "pointer" }}
+              width={40}
+              height={40}
+              style={{ cursor: "pointer", borderRadius: '50%' }}
             />
           ) : (
             <div
@@ -243,7 +236,7 @@ export default function Home() {
             onMarkerClick={openModal}
             onBoundsChange={setVisiblePhotos}
             center={mapViewState.center}
-            zoom={mapViewState.zoom} // zoom prop 전달
+            zoom={mapViewState.zoom}
             selectedPhoto={selectedPhoto}
           />
         )}
@@ -251,7 +244,7 @@ export default function Home() {
 
       <PhotoGallery
         photos={visiblePhotos}
-        onPhotoClick={handleGalleryPhotoClick} // 수정된 핸들러 연결
+        onPhotoClick={handleGalleryPhotoClick}
       />
 
       <RecentPhotos 

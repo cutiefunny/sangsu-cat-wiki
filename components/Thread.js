@@ -1,5 +1,6 @@
 // components/Thread.js
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { collection, addDoc, query, where, getDocs, serverTimestamp, orderBy, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { db, auth, storage } from '../lib/firebase/clientApp';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
@@ -68,7 +69,6 @@ function Thread({ cat, isAdmin, onPostCreated }) {
     }
     if (!newPost.trim() && !imageFile) return;
 
-    // cat 객체가 유효한지 확인
     if (!cat || !cat.id) {
         alert('고양이 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
         return;
@@ -78,7 +78,6 @@ function Thread({ cat, isAdmin, onPostCreated }) {
     let imageUrl = '';
 
     try {
-      // 1. 이미지가 있으면 업로드
       if (imageFile) {
         const options = { maxSizeMB: 0.5, maxWidthOrHeight: 800, useWebWorker: true, fileType: "image/avif" };
         const compressedFile = await imageCompression(imageFile, options);
@@ -90,10 +89,9 @@ function Thread({ cat, isAdmin, onPostCreated }) {
         const snapshot = await uploadBytes(storageRef, compressedFile, { contentType: 'image/avif' });
         imageUrl = await getDownloadURL(snapshot.ref);
 
-        // 2. 'photos' 컬렉션에도 사진 정보 추가 (갤러리용)
         await addDoc(collection(db, "photos"), {
             imageUrl: imageUrl,
-            lat: cat.lat || 0, // 도감의 대표 위치 정보 사용
+            lat: cat.lat || 0,
             lng: cat.lng || 0,
             createdAt: serverTimestamp(),
             userId: user.uid,
@@ -104,18 +102,16 @@ function Thread({ cat, isAdmin, onPostCreated }) {
           });
       }
 
-      // 3. 'threads' 컬렉션에 글과 이미지 URL 추가
       await addDoc(collection(db, 'threads'), {
         catId: cat.id,
         userId: user.uid,
         userName: user.displayName,
         userPhotoURL: user.photoURL,
         text: newPost,
-        imageUrl: imageUrl, // 이미지 URL 추가
+        imageUrl: imageUrl,
         createdAt: serverTimestamp(),
       });
       
-      // 폼 초기화
       setNewPost('');
       setImageFile(null);
       setImagePreview('');
@@ -123,11 +119,10 @@ function Thread({ cat, isAdmin, onPostCreated }) {
         fileInputRef.current.value = null;
       }
 
-      // 부모 컴포넌트에 데이터 새로고침 요청
       if (onPostCreated) {
         onPostCreated();
       }
-      fetchThreads(); // 현재 컴포넌트의 스레드 목록도 바로 갱신
+      fetchThreads();
 
     } catch (error) {
       console.error("Error adding post: ", error);
@@ -140,11 +135,8 @@ function Thread({ cat, isAdmin, onPostCreated }) {
   const handleDeletePost = async (post) => {
     if (confirm("정말로 이 글을 삭제하시겠습니까?")) {
         try {
-            // 이미지가 있는 게시물인 경우, Storage와 'photos' 컬렉션에서도 삭제
             if (post.imageUrl) {
                 const batch = writeBatch(db);
-
-                // 1. 'photos' 컬렉션에서 해당 이미지 URL을 가진 문서 찾아 삭제 목록에 추가
                 const photosQuery = query(collection(db, 'photos'), where('imageUrl', '==', post.imageUrl));
                 const photosSnapshot = await getDocs(photosQuery);
                 if (!photosSnapshot.empty) {
@@ -152,28 +144,17 @@ function Thread({ cat, isAdmin, onPostCreated }) {
                         batch.delete(photoDoc.ref);
                     });
                 }
-
-                // 2. 'threads' 문서 삭제 목록에 추가
                 batch.delete(doc(db, "threads", post.id));
-
-                // 3. Firestore 일괄 작업 실행
                 await batch.commit();
-
-                // 4. Storage에서 이미지 파일 삭제
                 const imageRef = ref(storage, post.imageUrl);
                 await deleteObject(imageRef);
-
             } else {
-                // 이미지가 없는 경우, 'threads' 문서만 삭제
                 await deleteDoc(doc(db, "threads", post.id));
             }
-
-            // 목록 새로고침
             fetchThreads();
-            if (onPostCreated) { // 부모 컴포넌트(도감 페이지)의 데이터 갱신
+            if (onPostCreated) {
               onPostCreated();
             }
-
         } catch (error) {
             console.error("Error deleting post: ", error);
             alert('삭제에 실패했습니다.');
@@ -194,7 +175,13 @@ function Thread({ cat, isAdmin, onPostCreated }) {
           />
           {imagePreview && (
             <div className={styles.imagePreviewContainer}>
-              <img src={imagePreview} alt="미리보기" className={styles.imagePreview}/>
+              <Image 
+                src={imagePreview} 
+                alt="미리보기" 
+                className={styles.imagePreview}
+                width={100}
+                height={100}
+              />
               <button type="button" onClick={() => {setImageFile(null); setImagePreview(''); if(fileInputRef.current) fileInputRef.current.value=null;}} className={styles.imagePreviewRemoveBtn}>&times;</button>
             </div>
           )}
@@ -218,11 +205,26 @@ function Thread({ cat, isAdmin, onPostCreated }) {
       <div className={styles.threadList}>
         {threads.map(post => (
           <div key={post.id} className={styles.threadItem}>
-            <img src={post.userPhotoURL} alt={post.userName} className={styles.threadUserPhoto} />
+            <Image 
+              src={post.userPhotoURL} 
+              alt={post.userName} 
+              className={styles.threadUserPhoto}
+              width={40}
+              height={40}
+            />
             <div className={styles.threadBody}>
               <strong>{post.userName}</strong>
               {post.text && <p>{post.text}</p>}
-              {post.imageUrl && <img src={post.imageUrl} alt="스레드 이미지" className={styles.threadImage} />}
+              {post.imageUrl && 
+                <Image 
+                  src={post.imageUrl} 
+                  alt="스레드 이미지" 
+                  className={styles.threadImage}
+                  width={500}
+                  height={400}
+                  style={{ width: '100%', height: 'auto' }}
+                />
+              }
               <span className={styles.threadDate}>
                 {post.createdAt ? new Date(post.createdAt.toDate()).toLocaleString() : ''}
               </span>

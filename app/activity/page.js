@@ -6,7 +6,8 @@ import { db, auth } from '../../lib/firebase/clientApp';
 import { onAuthStateChanged } from 'firebase/auth';
 import styles from './activity.module.css';
 import Link from 'next/link';
-import PhotoCardSkeleton from '../../components/PhotoCardSkeleton'; // 스켈레톤 컴포넌트 import
+import Image from 'next/image';
+import PhotoCardSkeleton from '../../components/PhotoCardSkeleton';
 
 export default function ActivityPage() {
   const [user, setUser] = useState(null);
@@ -82,7 +83,6 @@ export default function ActivityPage() {
         </section>
         <section>
           <h2>내가 쓴 댓글 (...)</h2>
-          {/* 댓글 스켈레톤 UI도 필요하다면 추가할 수 있습니다. */}
           <p className={styles.message}>로딩 중...</p>
         </section>
       </div>
@@ -106,7 +106,13 @@ export default function ActivityPage() {
           <div className={styles.photoGrid}>
             {myPhotos.map(photo => (
               <div key={photo.id} className={styles.photoCard}>
-                <img src={photo.imageUrl} alt="내가 올린 고양이 사진" />
+                <Image 
+                  src={photo.imageUrl} 
+                  alt="내가 올린 고양이 사진"
+                  fill
+                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                  style={{ objectFit: 'cover' }}
+                />
               </div>
             ))}
           </div>
@@ -122,7 +128,13 @@ export default function ActivityPage() {
             {myComments.map(comment => (
               <li key={comment.id} className={styles.commentItem}>
                 {comment.photo && (
-                  <img src={comment.photo.imageUrl} alt="댓글 단 사진" className={styles.commentPhotoThumbnail} />
+                  <Image 
+                    src={comment.photo.imageUrl} 
+                    alt="댓글 단 사진" 
+                    className={styles.commentPhotoThumbnail}
+                    width={60}
+                    height={60}
+                  />
                 )}
                 <div className={styles.commentContent}>
                   <p>"{comment.text}"</p>

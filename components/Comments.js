@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
+import Image from 'next/image'; // Image import
 import { collection, addDoc, query, where, getDocs, serverTimestamp, doc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase/clientApp';
 import styles from './Comments.module.css';
 
-// photoId 대신 photo 객체를 prop으로 받도록 수정합니다.
 function Comments({ photo, isAdmin, onLoginRequest }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -25,7 +25,6 @@ function Comments({ photo, isAdmin, onLoginRequest }) {
     setComments(commentsData);
   };
 
-  // photo.id가 변경될 때마다 댓글을 다시 불러옵니다.
   useEffect(() => {
     fetchComments();
   }, [photo.id]);
@@ -74,11 +73,16 @@ function Comments({ photo, isAdmin, onLoginRequest }) {
       <div className={styles.commentsList}>
         {comments.map(comment => (
           <div key={comment.id} className={styles.comment}>
-            <img src={comment.userPhotoURL} alt={comment.userName} className={styles.commentUserPhoto} />
+            <Image 
+              src={comment.userPhotoURL} 
+              alt={comment.userName} 
+              className={styles.commentUserPhoto}
+              width={30}
+              height={30}
+            />
             <div className={styles.commentBody}>
               <strong>
                 {comment.userName}
-                {/* 댓글 작성자와 사진 게시자가 동일한지 확인합니다. */}
                 {photo.userId === comment.userId && <span className={styles.authorTag}> (작성자)</span>}
               </strong>
               <p>{comment.text}</p>

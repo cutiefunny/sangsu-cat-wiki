@@ -2,8 +2,8 @@
 
 import { useEffect, useState, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link'; // Link import
-import Image from 'next/image'; // Image import
+import Link from 'next/link';
+import Image from 'next/image';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc, deleteDoc, writeBatch, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth, storage } from '../../lib/firebase/clientApp';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -13,16 +13,13 @@ import styles from './catProfile.module.css';
 import Thread from '../../components/Thread';
 import TagInput from '../../components/TagInput';
 
-// Swiper 관련 import 추가
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Keyboard } from 'swiper/modules';
 
-// Swiper 기본 스타일 import
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 
-// 날짜 포맷 함수 추가
 const formatDate = (date) => {
   const pad = (num) => num.toString().padStart(2, '0');
   const year = date.getFullYear();
@@ -210,7 +207,6 @@ export default function CatProfile({ params }) {
 
   return (
     <div className={styles.container}>
-      {/* 홈으로 가는 로고 링크 추가 */}
       <Link href="/" className={styles.homeLink}>
         <Image src="/images/icon.png" alt="홈으로" width={40} height={40} />
       </Link>
@@ -274,11 +270,20 @@ export default function CatProfile({ params }) {
               navigation
               pagination={{ clickable: true }}
               keyboard={{ enabled: true }}
-              loop={true}
+              loop={photos.length > 1}
             >
               {photos.map(photo => (
                 <SwiperSlide key={photo.id}>
-                  <img src={photo.imageUrl} alt={`${cat.name} 사진`} />
+                  <div className={styles.slideImageWrapper}>
+                    <Image 
+                      src={photo.imageUrl} 
+                      alt={`${cat.name} 사진`} 
+                      fill
+                      style={{ objectFit: 'contain' }}
+                      sizes="(max-width: 800px) 100vw, 800px"
+                      priority
+                    />
+                  </div>
                 </SwiperSlide>
               ))}
             </Swiper>
@@ -287,7 +292,7 @@ export default function CatProfile({ params }) {
           <p className={styles.message}>아직 등록된 사진이 없습니다.</p>
         )}
         
-        <Thread cat={cat} isAdmin={user && user.email === 'cutiefunny@gmail.com'} onPostCreated={fetchCatData} />
+        <Thread cat={cat} isAdmin={canEdit} onPostCreated={fetchCatData} />
       </main>
     </div>
   );

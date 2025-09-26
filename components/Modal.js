@@ -1,12 +1,12 @@
 import React from "react";
 import Link from 'next/link';
+import Image from 'next/image'; // Image import
 import styles from "./Modal.module.css";
 import Comments from "./Comments";
 
 function Modal({ photo, onClose, isAdmin, onDelete, onLoginRequest, onCreateCatProfile, user }) {
   if (!photo) return null;
 
-  // 현재 로그인한 사용자가 사진을 업로드한 사용자인지 확인
   const isOwner = user && user.uid === photo.userId;
 
   return (
@@ -16,9 +16,16 @@ function Modal({ photo, onClose, isAdmin, onDelete, onLoginRequest, onCreateCatP
           &times;
         </button>
         <div className={styles.imageContainer}>
-          <img src={photo.imageUrl} alt="상세 이미지" className={styles.modalImage} />
+          <Image 
+            src={photo.imageUrl} 
+            alt="상세 이미지" 
+            className={styles.modalImage} 
+            width={500} // 예시 크기, 실제 비율에 맞게 조정 필요
+            height={500}
+            style={{ width: '100%', height: 'auto', objectFit: 'contain' }}
+            priority // 모달 이미지는 중요하므로 우선 로드
+          />
 
-          {/* '도감 만들기' 또는 '도감 보기' 버튼 */}
           {photo.catId ? (
             <Link 
               href={`/${photo.catId}`} 
@@ -27,7 +34,6 @@ function Modal({ photo, onClose, isAdmin, onDelete, onLoginRequest, onCreateCatP
               도감 보기
             </Link>
           ) : (
-            // 사진 주인이면서 아직 도감이 없을 때만 '도감 만들기' 버튼 표시
             isOwner && (
               <button
                 className={`${styles.actionButton} ${styles.createAlbumButton}`}

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import Image from 'next/image'; // Image import
 import styles from './ProfileModal.module.css';
 import { auth } from '../lib/firebase/clientApp';
 import { signOut } from 'firebase/auth';
@@ -13,7 +14,7 @@ function ProfileModal({ user, onClose, onUpdateAvatar, onUpdateNickname }) {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      onClose(); // 로그아웃 후 모달 닫기
+      onClose();
     } catch (error) {
       console.error("Logout failed:", error);
       alert('로그아웃에 실패했습니다.');
@@ -28,7 +29,7 @@ function ProfileModal({ user, onClose, onUpdateAvatar, onUpdateNickname }) {
     const file = e.target.files[0];
     if (file) {
       onUpdateAvatar(file);
-      onClose(); // 업로드 함수 호출 후 모달 닫기
+      onClose();
     }
   };
 
@@ -45,7 +46,7 @@ function ProfileModal({ user, onClose, onUpdateAvatar, onUpdateNickname }) {
     const success = await onUpdateNickname(newNickname.trim());
     setIsLoading(false);
     if (success) {
-      setIsEditingNickname(false); // 성공 시에만 편집 모드 종료
+      setIsEditingNickname(false);
     }
   };
 
@@ -55,7 +56,13 @@ function ProfileModal({ user, onClose, onUpdateAvatar, onUpdateNickname }) {
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.profileSection}>
-          <img src={user.photoURL} alt="프로필 사진" className={styles.profileImage} />
+          <Image 
+            src={user.photoURL} 
+            alt="프로필 사진" 
+            className={styles.profileImage}
+            width={40}
+            height={40}
+          />
           {!isEditingNickname ? (
             <span className={styles.displayName}>{user.displayName}</span>
           ) : (

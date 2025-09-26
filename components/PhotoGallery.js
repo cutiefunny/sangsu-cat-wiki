@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image'; // Image import
 import styles from './PhotoGallery.module.css';
 
 function PhotoGallery({ photos, onPhotoClick }) {
@@ -14,7 +15,13 @@ function PhotoGallery({ photos, onPhotoClick }) {
     <div className={styles.container}>
       {photos.map((photo) => (
         <div key={photo.id} className={styles.photoWrapper} onClick={() => onPhotoClick(photo)}>
-          <img src={photo.imageUrl} alt="Gallery thumbnail" className={styles.photo} />
+          <Image 
+            src={photo.imageUrl} 
+            alt="Gallery thumbnail" 
+            className={styles.photo}
+            width={100}
+            height={100}
+          />
         </div>
       ))}
     </div>

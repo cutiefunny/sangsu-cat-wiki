@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import styles from './RecentPhotoCard.module.css'; // 파일 이름 변경에 따라 경로도 변경
+import Image from 'next/image'; // Image import
+import styles from './RecentPhotoCard.module.css';
 
 const formatTimestamp = (timestamp) => {
   if (!timestamp) return '';
@@ -42,9 +43,14 @@ const RecentPhotoCard = ({ photo }) => {
 
   return (
     <div className={styles.card}>
-      {/* 이미지와 정보 영역을 묶는 div 추가 */}
       <div className={styles.cardContent}>
-        <img src={photo.imageUrl} alt={photo.catName || '길고양이 사진'} className={styles.photo} />
+        <Image 
+          src={photo.imageUrl} 
+          alt={photo.catName || '길고양이 사진'} 
+          className={styles.photo}
+          width={100}
+          height={100}
+        />
         <div className={styles.info}>
           {photo.catName && <div className={styles.catName}>{photo.catName}</div>}
           <div className={styles.dateTime}>{formatTimestamp(photo.createdAt)}</div>
