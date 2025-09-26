@@ -59,16 +59,19 @@
 }
 
 .commentSubmitBtn {
-  padding: 8px 12px;
-  background-color: #007bff;
-  color: white;
+  background: transparent;
   border: none;
-  border-radius: 4px;
   cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
 }
 
 .commentSubmitBtn:hover {
-  background-color: #0056b3;
+  background-color: #f0f0f0;
 }
 
 /* 댓글 삭제 버튼 스타일 추가 */

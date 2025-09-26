@@ -26,11 +26,11 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
       };
       const map = new naver.maps.Map(mapElement.current, mapOptions);
       mapInstance.current = map;
-      
+
       naver.maps.Event.addListener(map, 'zoom_changed', () => {
         setCurrentZoom(map.getZoom());
       });
-      
+
       setIsMapInitialized(true);
     };
 
@@ -56,7 +56,7 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
     if (mapInstance.current && center) {
       const { naver } = window;
       const newCenter = new naver.maps.LatLng(center.lat, center.lng);
-      
+
       // morph 메서드를 사용하여 위치와 줌 레벨을 부드럽게 변경
       mapInstance.current.morph(newCenter, zoom);
     }
@@ -73,6 +73,12 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
       const marker = new naver.maps.Marker({
         position: new naver.maps.LatLng(photo.lat, photo.lng),
         map: mapInstance.current,
+        icon: {
+          url: '/images/pin.png',
+          size: new naver.maps.Size(22, 30),
+          scaledSize: new naver.maps.Size(22, 30),
+          anchor: new naver.maps.Point(11, 15),
+        },
       });
       naver.maps.Event.addListener(marker, "click", () => onMarkerClick(photo));
       existingMarkersRef.current.push({ id: photo.id, photo: photo, marker: marker });
@@ -107,14 +113,19 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
       if (currentZoom >= MAX_ZOOM_LEVEL_FOR_PHOTO) {
         const style = isSelected ? HIGHLIGHTED_ICON_STYLE : REGULAR_ICON_STYLE;
         const anchor = isSelected ? new naver.maps.Point(35, 35) : new naver.maps.Point(30, 30);
-        
+
         marker.setIcon({
           content: `<div style="${style.replace('{imageUrl}', photo.imageUrl)}"></div>`,
           anchor: anchor,
         });
         marker.setZIndex(zIndex);
       } else {
-        marker.setIcon(null);
+        marker.setIcon({
+          url: '/images/pin.png',
+          size: new naver.maps.Size(22, 30),
+          scaledSize: new naver.maps.Size(22, 30),
+          anchor: new naver.maps.Point(11, 15),
+        });
         marker.setZIndex(zIndex);
       }
     });
@@ -130,8 +141,10 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
           map: mapInstance.current,
           draggable: true,
           icon: {
-            content: `<div style="background-color: red; width: 25px; height: 25px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>`,
-            anchor: new naver.maps.Point(12, 12),
+            url: '/images/pin.png',
+            size: new naver.maps.Size(22, 30),
+            scaledSize: new naver.maps.Size(22, 30),
+            anchor: new naver.maps.Point(11, 15),
           },
         });
         naver.maps.Event.addListener(draggableMarkerRef.current, 'dragend', () => {

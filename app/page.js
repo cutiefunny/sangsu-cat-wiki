@@ -178,7 +178,7 @@ export default function Home() {
   return (
     <div className={pageStyles.container}>
       <header className={pageStyles.header}>
-        <Image src="/images/icon.png" alt="로고" width={40} height={40} />
+        <Image src="/images/cat-wiki-title.png" alt="로고" height={40} width={100} />
         <div className={pageStyles.userInfo}>
           <ImageUpload
             handleFileSelect={handleFileSelect}

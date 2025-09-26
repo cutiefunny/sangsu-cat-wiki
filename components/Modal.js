@@ -16,10 +16,10 @@ function Modal({ photo, onClose, isAdmin, onDelete, onLoginRequest, onCreateCatP
           &times;
         </button>
         <div className={styles.imageContainer}>
-          <Image 
-            src={photo.imageUrl} 
-            alt="상세 이미지" 
-            className={styles.modalImage} 
+          <Image
+            src={photo.imageUrl}
+            alt="상세 이미지"
+            className={styles.modalImage}
             width={500} // 예시 크기, 실제 비율에 맞게 조정 필요
             height={500}
             style={{ width: '100%', height: 'auto', objectFit: 'contain' }}
@@ -27,11 +27,11 @@ function Modal({ photo, onClose, isAdmin, onDelete, onLoginRequest, onCreateCatP
           />
 
           {photo.catId ? (
-            <Link 
-              href={`/${photo.catId}`} 
+            <Link
+              href={`/${photo.catId}`}
               className={`${styles.actionButton} ${styles.viewAlbumButton}`}
             >
-              도감 보기
+              <Image src="/images/view-wiki.png" alt="도감 보기" width={120} height={50} />
             </Link>
           ) : (
             isOwner && (
@@ -39,7 +39,7 @@ function Modal({ photo, onClose, isAdmin, onDelete, onLoginRequest, onCreateCatP
                 className={`${styles.actionButton} ${styles.createAlbumButton}`}
                 onClick={() => onCreateCatProfile(photo)}
               >
-                도감 만들기
+                <Image src="/images/make-wiki.png" alt="도감 만들기" width={120} height={50} />
               </button>
             )
           )}

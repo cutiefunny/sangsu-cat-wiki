@@ -52,7 +52,7 @@ function Thread({ cat, isAdmin, onPostCreated }) {
         fetchThreads();
     }
   }, [cat?.id]);
-  
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -81,11 +81,11 @@ function Thread({ cat, isAdmin, onPostCreated }) {
       if (imageFile) {
         const options = { maxSizeMB: 0.5, maxWidthOrHeight: 800, useWebWorker: true, fileType: "image/avif" };
         const compressedFile = await imageCompression(imageFile, options);
-        
+
         const timestamp = formatDate(new Date());
         const newFileName = `${timestamp}.avif`;
         const storageRef = ref(storage, `images/${newFileName}`);
-        
+
         const snapshot = await uploadBytes(storageRef, compressedFile, { contentType: 'image/avif' });
         imageUrl = await getDownloadURL(snapshot.ref);
 
@@ -111,7 +111,7 @@ function Thread({ cat, isAdmin, onPostCreated }) {
         imageUrl: imageUrl,
         createdAt: serverTimestamp(),
       });
-      
+
       setNewPost('');
       setImageFile(null);
       setImagePreview('');
@@ -175,9 +175,9 @@ function Thread({ cat, isAdmin, onPostCreated }) {
           />
           {imagePreview && (
             <div className={styles.imagePreviewContainer}>
-              <Image 
-                src={imagePreview} 
-                alt="미리보기" 
+              <Image
+                src={imagePreview}
+                alt="미리보기"
                 className={styles.imagePreview}
                 width={100}
                 height={100}
@@ -186,8 +186,8 @@ function Thread({ cat, isAdmin, onPostCreated }) {
             </div>
           )}
           <div className={styles.formActions}>
-            <button type="button" onClick={() => fileInputRef.current.click()} className={styles.addPhotoButton}>
-              사진 추가
+            <button type="button" onClick={() => fileInputRef.current.click()} className={styles.imageButton}>
+              <Image src="/images/upload.png" alt="사진 올리기" width={40} height={40} />
             </button>
             <input
               type="file"
@@ -197,7 +197,7 @@ function Thread({ cat, isAdmin, onPostCreated }) {
               style={{ display: 'none' }}
             />
             <button type="submit" className={styles.threadSubmitBtn} disabled={isLoading}>
-              {isLoading ? '등록 중...' : '등록'}
+              <Image src="/images/confirm.png" alt="등록" width={45} height={35} />
             </button>
           </div>
         </form>
@@ -205,9 +205,9 @@ function Thread({ cat, isAdmin, onPostCreated }) {
       <div className={styles.threadList}>
         {threads.map(post => (
           <div key={post.id} className={styles.threadItem}>
-            <Image 
-              src={post.userPhotoURL} 
-              alt={post.userName} 
+            <Image
+              src={post.userPhotoURL}
+              alt={post.userName}
               className={styles.threadUserPhoto}
               width={40}
               height={40}
@@ -215,10 +215,10 @@ function Thread({ cat, isAdmin, onPostCreated }) {
             <div className={styles.threadBody}>
               <strong>{post.userName}</strong>
               {post.text && <p>{post.text}</p>}
-              {post.imageUrl && 
-                <Image 
-                  src={post.imageUrl} 
-                  alt="스레드 이미지" 
+              {post.imageUrl &&
+                <Image
+                  src={post.imageUrl}
+                  alt="스레드 이미지"
                   className={styles.threadImage}
                   width={500}
                   height={400}

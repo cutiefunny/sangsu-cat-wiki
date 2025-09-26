@@ -17,3 +17,24 @@
   background-color: #cccccc;
   cursor: not-allowed;
 }
+
+.imageButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 1px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.imageButton:hover {
+  background-color: #f0f0f0;
+}
+
+.imageButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

@@ -73,9 +73,9 @@ function Comments({ photo, isAdmin, onLoginRequest }) {
       <div className={styles.commentsList}>
         {comments.map(comment => (
           <div key={comment.id} className={styles.comment}>
-            <Image 
-              src={comment.userPhotoURL} 
-              alt={comment.userName} 
+            <Image
+              src={comment.userPhotoURL}
+              alt={comment.userName}
               className={styles.commentUserPhoto}
               width={30}
               height={30}
@@ -107,7 +107,9 @@ function Comments({ photo, isAdmin, onLoginRequest }) {
           placeholder="댓글을 입력하세요..."
           className={styles.commentInput}
         />
-        <button type="submit" className={styles.commentSubmitBtn}>등록</button>
+        <button type="submit" className={styles.commentSubmitBtn}>
+          <Image src="/images/confirm.png" alt="등록" width={40} height={30} />
+        </button>
       </form>
     </div>
   );

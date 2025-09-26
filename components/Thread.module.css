@@ -29,7 +29,7 @@
 
 .formActions {
   display: flex;
-  justify-content: space-between;
+  justify-content: right;
   align-items: center;
 }
 
@@ -43,17 +43,25 @@
 }
 
 .threadSubmitBtn {
-  padding: 8px 16px;
-  background-color: #28a745;
-  color: white;
+  background: transparent;
   border: none;
-  border-radius: 4px;
   cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.threadSubmitBtn:hover {
+  background-color: #f0f0f0;
 }
 
 .threadSubmitBtn:disabled {
   background-color: #cccccc;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .imagePreviewContainer {
@@ -148,4 +156,25 @@
     color: #aaa;
     cursor: pointer;
     font-size: 22px;
+}
+
+.imageButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 1px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.imageButton:hover {
+  background-color: #f0f0f0;
+}
+
+.imageButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
