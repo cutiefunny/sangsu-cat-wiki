@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
-import Image from "next/image"; // next/image 사용
+import Image from "next/image";
 import ImageUpload from "../components/ImageUpload";
 import Modal from "../components/Modal";
 import LoginModal from "../components/LoginModal";
@@ -18,36 +18,34 @@ import buttonStyles from "../components/controls.module.css";
 
 import { useAuth } from "../hooks/useAuth";
 import { useModal } from "../hooks/useModal";
-// 1. usePhotos 훅 대신 Zustand 스토어를 import 합니다.
-import { usePhotoStore } from "../store/photoStore"; 
+import { usePhotoStore } from "../store/photoStore";
 
 const Map = dynamic(() => import("../components/Map"), {
   ssr: false,
 });
 
 export default function Home() {
-  const { 
-    user, 
-    isAdmin, 
-    handleGoogleLogin, 
-    handleUpdateAvatar, 
-    handleUpdateNickname 
+  const {
+    user,
+    isAdmin,
+    handleGoogleLogin,
+    handleUpdateAvatar,
+    handleUpdateNickname
   } = useAuth();
-  
-  // 2. usePhotos 훅과 관련 useState를 Zustand 스토어로 대체합니다.
+
+  // Zustand 스토어에서 상태와 함수들을 가져옵니다.
   const {
     photos,
     recentPhotos,
     isLoading: isPhotosLoading,
     isLoadingRecent: isLoadingRecentPhotos,
     isUploading,
-    photoToCreateProfileFor,
-    setPhotoToCreateProfileFor,
     fetchPhotos,
     fetchRecent,
     uploadPhoto,
     deletePhoto,
     handleSaveCatProfile,
+    setPhotoToCreateProfileFor,
   } = usePhotoStore();
 
   const {
@@ -70,18 +68,18 @@ export default function Home() {
   const [tempMarker, setTempMarker] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [visiblePhotos, setVisiblePhotos] = useState([]);
-  
+
   const [mapViewState, setMapViewState] = useState({ center: null, zoom: 13 });
-  
+
   const [showExitToast, setShowExitToast] = useState(false);
   const backPressRef = useRef(false);
   const mapRef = useRef(null);
 
-  // 3. 앱 로드 시 Zustand 스토어의 fetch 함수들을 호출합니다.
+  // 앱 로드 시 Zustand 스토어의 fetch 함수들을 호출합니다.
   useEffect(() => {
     fetchPhotos();
     fetchRecent();
-  }, [fetchPhotos, fetchRecent]); 
+  }, [fetchPhotos, fetchRecent]);
 
   useEffect(() => {
     window.history.pushState(null, "", window.location.href);
@@ -125,7 +123,7 @@ export default function Home() {
               );
             });
           }
-          
+
           const options = { maxSizeMB: 0.5, maxWidthOrHeight: 800, useWebWorker: true, fileType: "image/avif" };
           const compressedFile = await imageCompression(file, options);
           setSelectedImage(compressedFile);
@@ -140,28 +138,27 @@ export default function Home() {
     processImage(imageFile);
   }, []);
 
-  // 4. 핸들러 함수들이 Zustand 스토어의 함수를 사용하도록 수정합니다.
   const handleConfirmUpload = useCallback(async () => {
-    await uploadPhoto(selectedImage, tempMarker, user); // user 정보를 넘겨줍니다.
+    await uploadPhoto(selectedImage, tempMarker, user);
     setIsConfirming(false);
     setTempMarker(null);
     setSelectedImage(null);
   }, [selectedImage, tempMarker, uploadPhoto, user]);
-  
+
   const handleDelete = async (photoId, imageUrl) => {
     if (await deletePhoto(photoId, imageUrl)) {
       closeModal();
     }
   };
-  
+
   const handleOpenCreateModal = (photo) => {
     setPhotoToCreateProfileFor(photo);
     openCreateCatProfileModal();
   };
 
   const handleSaveProfile = async (catData) => {
-    const success = await handleSaveCatProfile(catData, user); // user 정보를 넘겨줍니다.
-    if(success) {
+    const success = await handleSaveCatProfile(catData, user);
+    if (success) {
       closeCreateCatProfileModal();
       setPhotoToCreateProfileFor(null);
     }
@@ -172,7 +169,7 @@ export default function Home() {
     setMapViewState({ center: { lat: photo.lat, lng: photo.lng }, zoom: 17 });
     openModal(photo);
   };
-  
+
   const handleGalleryPhotoClick = (photo) => {
     setMapViewState(prevState => ({ ...prevState, center: { lat: photo.lat, lng: photo.lng } }));
     openModal(photo);
@@ -221,7 +218,7 @@ export default function Home() {
           </button>
         </div>
       )}
-      
+
       <div ref={mapRef}>
         {isPhotosLoading ? (
           <div style={{ width: "100%", height: "400px", backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -247,9 +244,9 @@ export default function Home() {
         onPhotoClick={handleGalleryPhotoClick}
       />
 
-      <RecentPhotos 
-        photos={recentPhotos} 
-        isLoading={isLoadingRecentPhotos} 
+      <RecentPhotos
+        photos={recentPhotos}
+        isLoading={isLoadingRecentPhotos}
         onPhotoClick={handleRecentPhotoClick}
       />
 
@@ -273,7 +270,7 @@ export default function Home() {
           onSave={handleSaveProfile}
         />
       )}
-      
+
       {showLoginModal && (
         <LoginModal
           onLogin={() => {

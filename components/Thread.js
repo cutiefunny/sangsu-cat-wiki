@@ -69,8 +69,8 @@ function Thread({ cat, isAdmin, onPostCreated }) {
     }
     if (!newPost.trim() && !imageFile) return;
 
-    if (!cat || !cat.id) {
-        alert('고양이 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+    if (!cat || !cat.id || typeof cat.lat === 'undefined' || typeof cat.lng === 'undefined') {
+        alert('고양이 위치 정보가 올바르지 않습니다. 잠시 후 다시 시도해주세요.');
         return;
     }
 
@@ -91,8 +91,8 @@ function Thread({ cat, isAdmin, onPostCreated }) {
 
         await addDoc(collection(db, "photos"), {
             imageUrl: imageUrl,
-            lat: cat.lat || 0,
-            lng: cat.lng || 0,
+            lat: cat.lat, // 항상 도감의 위치 정보 사용
+            lng: cat.lng, // 항상 도감의 위치 정보 사용
             createdAt: serverTimestamp(),
             userId: user.uid,
             userName: user.displayName,
