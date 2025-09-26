@@ -12,6 +12,7 @@ import imageCompression from "browser-image-compression";
 import styles from './catProfile.module.css';
 import Thread from '../../components/Thread';
 import TagInput from '../../components/TagInput';
+import CatProfileSkeleton from '../../components/CatProfileSkeleton'; // 스켈레톤 UI import
 
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Keyboard } from 'swiper/modules';
@@ -40,10 +41,9 @@ export default function CatProfile({ params }) {
   const [editedName, setEditedName] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
   const [editedTags, setEditedTags] = useState([]);
-  const [isUploading, setIsUploading] = useState(false);
-
-  const fileInputRef = useRef(null);
+  
   const router = useRouter();
+  // `use` 훅을 사용하여 params 값을 올바르게 가져옵니다.
   const resolvedParams = use(params);
   const { catId } = resolvedParams;
 
@@ -56,6 +56,7 @@ export default function CatProfile({ params }) {
 
   const fetchCatData = async () => {
     if (!catId) return;
+    // 데이터를 새로 불러올 때 로딩 상태를 true로 설정합니다.
     setLoading(true);
     try {
       const catDocRef = doc(db, 'cats', catId);
@@ -160,49 +161,9 @@ export default function CatProfile({ params }) {
     }
   };
 
-  const handleFileSelect = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !cat) return;
-
-    setIsUploading(true);
-    try {
-      const options = { maxSizeMB: 0.1, maxWidthOrHeight: 600, useWebWorker: true, fileType: "image/avif" };
-      const compressedFile = await imageCompression(file, options);
-      
-      const timestamp = formatDate(new Date());
-      const newFileName = `${timestamp}.avif`;
-      const storageRef = ref(storage, `images/${newFileName}`);
-      
-      const metadata = { contentType: 'image/avif' };
-      const snapshot = await uploadBytes(storageRef, compressedFile, metadata);
-      const url = await getDownloadURL(snapshot.ref);
-
-      await addDoc(collection(db, "photos"), {
-        imageUrl: url,
-        lat: cat.lat || 0,
-        lng: cat.lng || 0,
-        createdAt: serverTimestamp(),
-        userId: user.uid,
-        userName: user.displayName,
-        userPhotoURL: user.photoURL,
-        catId: cat.id,
-        catName: cat.name,
-      });
-
-      alert("사진이 도감에 추가되었습니다.");
-      fetchCatData();
-    } catch (error) {
-      console.error("Upload failed:", error);
-      alert("업로드에 실패했습니다.");
-    } finally {
-      setIsUploading(false);
-      e.target.value = null;
-    }
-  };
-
   const canEdit = user && (user.email === 'cutiefunny@gmail.com' || user.uid === cat?.createdBy);
 
-  if (loading) return <div className={styles.message}>로딩 중...</div>;
+  if (loading) return <CatProfileSkeleton />;
   if (!cat) return <div className={styles.message}>존재하지 않는 고양이입니다.</div>;
 
   return (
@@ -292,7 +253,7 @@ export default function CatProfile({ params }) {
           <p className={styles.message}>아직 등록된 사진이 없습니다.</p>
         )}
         
-        <Thread cat={cat} isAdmin={canEdit} onPostCreated={fetchCatData} />
+        {cat && <Thread cat={cat} isAdmin={canEdit} onPostCreated={fetchCatData} />}
       </main>
     </div>
   );
