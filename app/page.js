@@ -235,6 +235,7 @@ export default function Home() {
             center={mapViewState.center}
             zoom={mapViewState.zoom}
             selectedPhoto={selectedPhoto}
+            blink={isConfirming}
           />
         )}
       </div>

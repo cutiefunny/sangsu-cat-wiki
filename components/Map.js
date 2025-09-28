@@ -6,13 +6,14 @@ const MAX_ZOOM_LEVEL_FOR_PHOTO = 18;
 const REGULAR_ICON_STYLE = 'width: 60px; height: 60px; border-radius: 50%; background-image: url({imageUrl}); background-size: cover; background-position: center center; border: 3px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.5);';
 const HIGHLIGHTED_ICON_STYLE = 'width: 70px; height: 70px; border-radius: 50%; background-image: url({imageUrl}); background-size: cover; background-position: center center; border: 4px solid #007bff; box-shadow: 0 0 12px rgba(0,123,255,0.8);';
 
-function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerClick, onBoundsChange, center, zoom, selectedPhoto }) {
+function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerClick, onBoundsChange, center, zoom, selectedPhoto, blink }) {
   const mapElement = useRef(null);
   const mapInstance = useRef(null);
-  const draggableMarkerRef = useRef(null);
+  const tempMarkerRef = useRef(null);
   const existingMarkersRef = useRef([]);
   const [currentZoom, setCurrentZoom] = useState(zoom || 13);
   const [isMapInitialized, setIsMapInitialized] = useState(false);
+  const [blinkImage, setBlinkImage] = useState('/images/pin.png');
 
   useEffect(() => {
     const { naver } = window;
@@ -21,7 +22,7 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
     const initializeMap = (centerLatLng) => {
       const mapOptions = {
         center: centerLatLng,
-        zoom: zoom || 13, // 초기 줌 레벨 설정
+        zoom: zoom || 13,
         zoomControl: true,
       };
       const map = new naver.maps.Map(mapElement.current, mapOptions);
@@ -51,13 +52,10 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
     }
   }, [isMapInitialized, zoom]);
 
-  // ### 지도 중심 및 줌 레벨 이동 로직 수정 ###
   useEffect(() => {
     if (mapInstance.current && center) {
       const { naver } = window;
       const newCenter = new naver.maps.LatLng(center.lat, center.lng);
-
-      // morph 메서드를 사용하여 위치와 줌 레벨을 부드럽게 변경
       mapInstance.current.morph(newCenter, zoom);
     }
   }, [center, zoom]);
@@ -132,36 +130,70 @@ function Map({ photos, tempMarker, onTempMarkerChange, isConfirming, onMarkerCli
   }, [currentZoom, selectedPhoto]);
 
   useEffect(() => {
+    if (!mapInstance.current || !isConfirming) return;
+
+    const { naver } = window;
+    const listener = naver.maps.Event.addListener(mapInstance.current, 'click', (e) => {
+      onTempMarkerChange({ lat: e.coord.lat(), lng: e.coord.lng() });
+    });
+
+    return () => {
+      naver.maps.Event.removeListener(listener);
+    };
+  }, [isConfirming, onTempMarkerChange]);
+
+  useEffect(() => {
     const { naver } = window;
     if (!mapInstance.current || !naver) return;
+    
     if (isConfirming && tempMarker) {
-      if (!draggableMarkerRef.current) {
-        draggableMarkerRef.current = new naver.maps.Marker({
+      if (!tempMarkerRef.current) {
+        tempMarkerRef.current = new naver.maps.Marker({
           position: new naver.maps.LatLng(tempMarker.lat, tempMarker.lng),
           map: mapInstance.current,
-          draggable: true,
+          draggable: false,
           icon: {
-            url: '/images/pin.png',
+            url: blink ? blinkImage : '/images/pin.png',
             size: new naver.maps.Size(22, 30),
             scaledSize: new naver.maps.Size(22, 30),
             anchor: new naver.maps.Point(11, 15),
           },
         });
-        naver.maps.Event.addListener(draggableMarkerRef.current, 'dragend', () => {
-          const newCoord = draggableMarkerRef.current.getPosition();
-          onTempMarkerChange({ lat: newCoord.y, lng: newCoord.x });
-        });
       } else {
-        draggableMarkerRef.current.setPosition(new naver.maps.LatLng(tempMarker.lat, tempMarker.lng));
+        tempMarkerRef.current.setPosition(new naver.maps.LatLng(tempMarker.lat, tempMarker.lng));
+        tempMarkerRef.current.setIcon({
+          url: blink ? blinkImage : '/images/pin.png',
+          size: new naver.maps.Size(22, 30),
+          scaledSize: new naver.maps.Size(22, 30),
+          anchor: new naver.maps.Point(11, 15),
+        });
       }
       mapInstance.current.panTo(new naver.maps.LatLng(tempMarker.lat, tempMarker.lng));
     } else {
-      if (draggableMarkerRef.current) {
-        draggableMarkerRef.current.setMap(null);
-        draggableMarkerRef.current = null;
+      if (tempMarkerRef.current) {
+        tempMarkerRef.current.setMap(null);
+        tempMarkerRef.current = null;
       }
     }
-  }, [isConfirming, tempMarker, onTempMarkerChange]);
+  }, [isConfirming, tempMarker, blink, blinkImage]);
+
+  // --- 점멸 효과 간격 수정 ---
+  useEffect(() => {
+    let intervalId;
+    if (isConfirming && blink) {
+      intervalId = setInterval(() => {
+        setBlinkImage(prev => prev === '/images/pin.png' ? '/images/pin2.png' : '/images/pin.png');
+      }, 500); // 1초(1000ms)에서 0.5초(500ms)로 변경
+    } else {
+      setBlinkImage('/images/pin.png');
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isConfirming, blink]);
 
   return <div ref={mapElement} style={{ width: "100%", height: "400px" }} />;
 }
