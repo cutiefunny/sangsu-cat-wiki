@@ -43,7 +43,6 @@ export default function CatProfile({ params }) {
   const [editedTags, setEditedTags] = useState([]);
   
   const router = useRouter();
-  // `use` 훅을 사용하여 params 값을 올바르게 가져옵니다.
   const resolvedParams = use(params);
   const { catId } = resolvedParams;
 
@@ -56,7 +55,6 @@ export default function CatProfile({ params }) {
 
   const fetchCatData = async () => {
     if (!catId) return;
-    // 데이터를 새로 불러올 때 로딩 상태를 true로 설정합니다.
     setLoading(true);
     try {
       const catDocRef = doc(db, 'cats', catId);
@@ -75,7 +73,21 @@ export default function CatProfile({ params }) {
           orderBy('createdAt', 'desc')
         );
         const querySnapshot = await getDocs(photosQuery);
-        setPhotos(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        
+        // --- 여기부터 이미지 정렬 로직이 추가되었습니다 ---
+        let photosData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // 대표 사진(mainPhotoUrl)을 찾아서 배열의 맨 앞으로 이동
+        if (catData.mainPhotoUrl) {
+          const mainPhotoIndex = photosData.findIndex(p => p.imageUrl === catData.mainPhotoUrl);
+          if (mainPhotoIndex > -1) {
+            const mainPhoto = photosData.splice(mainPhotoIndex, 1)[0];
+            photosData.unshift(mainPhoto);
+          }
+        }
+        setPhotos(photosData);
+        // --- 여기까지 이미지 정렬 로직입니다 ---
+
       } else {
         console.log('No such cat!');
         setCat(null);
