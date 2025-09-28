@@ -11,6 +11,7 @@ import PhotoGallery from "../components/PhotoGallery";
 import CreateCatProfileModal from "../components/CreateCatProfileModal";
 import Toast from "../components/Toast";
 import RecentPhotos from "../components/RecentPhotos";
+import InstallPWA_Modal from "../components/InstallPWA_Modal"; // 새로 만든 모달 import
 import EXIF from "exif-js";
 import imageCompression from "browser-image-compression";
 import pageStyles from "./page.module.css";
@@ -33,7 +34,6 @@ export default function Home() {
     handleUpdateNickname
   } = useAuth();
 
-  // Zustand 스토어에서 상태와 함수들을 가져옵니다.
   const {
     photos,
     recentPhotos,
@@ -68,18 +68,78 @@ export default function Home() {
   const [tempMarker, setTempMarker] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [visiblePhotos, setVisiblePhotos] = useState([]);
-
   const [mapViewState, setMapViewState] = useState({ center: null, zoom: 13 });
-
   const [showExitToast, setShowExitToast] = useState(false);
   const backPressRef = useRef(false);
   const mapRef = useRef(null);
+  
+  // --- 앱 설치 권장 모달 관련 state 추가 ---
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const [userOS, setUserOS] = useState(null);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
 
-  // 앱 로드 시 Zustand 스토어의 fetch 함수들을 호출합니다.
   useEffect(() => {
     fetchPhotos();
     fetchRecent();
   }, [fetchPhotos, fetchRecent]);
+
+  // --- 앱 설치 권장 로직 useEffect ---
+  useEffect(() => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    if (isStandalone) return;
+
+    const lastPromptTime = localStorage.getItem('installPromptLastShown');
+    const oneDay = 24 * 60 * 60 * 1000;
+
+    if (!lastPromptTime || (Date.now() - parseInt(lastPromptTime)) > oneDay) {
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      let detectedOS = null;
+      // 안드로이드이면서 PWA 설치 가능 이벤트가 발생했을 경우
+      if (/android/i.test(userAgent)) {
+        detectedOS = 'android';
+      } 
+      // iOS일 경우
+      else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+        detectedOS = 'ios';
+      }
+
+      if (detectedOS) {
+        setUserOS(detectedOS);
+        setShowInstallModal(true);
+        localStorage.setItem('installPromptLastShown', Date.now().toString());
+      }
+    }
+  }, []);
+
+  // --- beforeinstallprompt 이벤트 리스너 ---
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      } else {
+        console.log('User dismissed the install prompt');
+      }
+      setDeferredPrompt(null);
+      setShowInstallModal(false);
+    } else {
+      // PWA 설치 이벤트가 감지되지 않은 안드로이드 사용자를 위한 안내
+      alert('앱을 설치할 수 없습니다. 브라우저의 "홈 화면에 추가" 기능을 이용해 주세요.');
+    }
+  };
+
 
   useEffect(() => {
     window.history.pushState(null, "", window.location.href);
@@ -235,7 +295,6 @@ export default function Home() {
             center={mapViewState.center}
             zoom={mapViewState.zoom}
             selectedPhoto={selectedPhoto}
-            blink={isConfirming}
           />
         )}
       </div>
@@ -252,6 +311,15 @@ export default function Home() {
       />
 
       <Toast message="뒤로 가기를 한 번 더 누르면 앱이 종료됩니다." show={showExitToast} />
+
+      {/* --- 모달 렌더링 부분 추가 --- */}
+      {showInstallModal && (
+        <InstallPWA_Modal
+          os={userOS}
+          onClose={() => setShowInstallModal(false)}
+          onInstall={handleInstallClick}
+        />
+      )}
 
       {isModalOpen && (
         <Modal
