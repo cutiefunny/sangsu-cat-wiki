@@ -52,7 +52,7 @@ const RecentPhotoCard = ({ photo }) => {
           height={100}
         />
         <div className={styles.info}>
-          {photo.catName && <div className={styles.catName}>{photo.catName}</div>}
+          {/* {photo.catName && <div className={styles.catName}>{photo.catName}</div>} */}
           <div className={styles.dateTime}>{formatTimestamp(photo.createdAt)}</div>
           <div className={styles.location}>{address}</div>
         </div>
